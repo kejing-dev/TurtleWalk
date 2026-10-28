@@ -32,7 +32,8 @@ internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEve
         if (!filled) return@Glass
         Row(modifier = Modifier.fillMaxWidth().height(KeyHeight), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             Segments(
-                items = listOf("lang_system" to null, "lang_zh" to rs(R.string.lang_zh), "lang_en" to rs(R.string.lang_en)),
+                // "follow the system" in words (taste B19: icon-only buttons are not understood)
+                items = listOf("lang_system" to rs(R.string.lang_system_short), "lang_zh" to rs(R.string.lang_zh), "lang_en" to rs(R.string.lang_en)),
                 selected = state.language.ordinal,
                 onSelect = { onEvent(TurtleEvent.LanguageSelected(LanguagePref.entries[it])) },
                 itemWidth = 84.dp,

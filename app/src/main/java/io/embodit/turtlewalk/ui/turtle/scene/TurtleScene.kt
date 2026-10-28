@@ -508,6 +508,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         tape.group.setShown(true)
         val m = materials ?: return
         if (state.phase == Phase.PLACING) {
+            tape.layout(liveSize, solid = snapped || state.snapped)
             tape.setStyle(if (snapped || state.snapped) m.tapeSnapped else m.tapePlacing, state.placeCheck.cramped?.side)
             fg.setShown(false)
             return
@@ -694,7 +695,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
     private fun drawInk(exec: Execution, moveIndex: Int, share: Float, step: Float, dim: Boolean) {
         val bars = inkBars ?: return
         val m = materials ?: return
-        val restart = exec !== inkExec || dim != inkMaterialDim || abs(step - inkLaidStep) > 1e-4f || moveIndex < inkLaidMoves
+        val restart = exec !== inkExec || dim != inkMaterialDim || abs(step - inkLaidStep) > 1e-4f || moveIndex < inkLaidMoves || inkLaidMoves < 0
         if (restart) {
             inkExec = exec
             inkMaterialDim = dim
@@ -1074,7 +1075,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         val frame = placeRule.snapFrame(pose, half, planeTracker.all)
         val st = snapTape
         if (frame != null && st != null) {
-            st.layout(size)
+            st.layout(size, solid = snapped)
             st.group.setPose(frame.pose, state.floorY)
             st.group.setShown(true)
             val d = hypot(frame.pose.center.x - center.x, frame.pose.center.z - center.z)

@@ -743,7 +743,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
         val mode = core.substringAfter(':', "")
         debugHold = false
         TurtleGraph.head.forceLost = false
-        update { it.copy(lost = false, hasFloor = realHasFloor || estFloor, estFloor = estFloor && !realHasFloor, menuOpen = false, coach = null, notOnStart = false, offPath = false, blocked = null, canvasMoving = false, placeCheck = PlaceCheck.CLEAR, snapped = false, hintLevel = 0, undoProgram = null, selected = null) }
+        update { it.copy(lost = false, hasFloor = realHasFloor || estFloor, estFloor = estFloor && !realHasFloor, menuOpen = false, coach = null, notOnStart = false, offPath = false, blocked = null, canvasMoving = false, placeCheck = PlaceCheck.CLEAR, snapped = false, hintLevel = 0, undoProgram = null, selected = null, snack = null) }
         lessonPart.toIntOrNull()?.let { n -> if (n != _state.value.lessonN || base == "coding") openLesson(n) }
         val needsField = base !in setOf("starting", "lessons", "placing", "blocked")
         if (needsField && _state.value.field == null) debugPlace(null)

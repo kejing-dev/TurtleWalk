@@ -633,7 +633,8 @@ private fun ColumnScope.RunningRight(state: TurtleUiState, onEvent: (TurtleEvent
 private fun verdictLine(r: CheckResult): String =
     when (r.verdict) {
         Verdict.MATCH -> rs(R.string.verdict_match)
-        Verdict.OPEN -> if (r.outOfField) rs(R.string.verdict_different) else rs(R.string.verdict_open, String.format(Locale.US, "%.1f", r.gapSteps))
+        // out of the field the gap is not measured (design R2-4): the verdict without "N steps off"
+        Verdict.OPEN -> if (r.outOfField) rs(R.string.verdict_open_plain) else rs(R.string.verdict_open, String.format(Locale.US, "%.1f", r.gapSteps))
         Verdict.SPIN -> rs(R.string.verdict_spin, abs(r.spinDeg).roundToInt())
         Verdict.MIRROR -> rs(R.string.verdict_mirror, if (r.mirrorToRight) rs(R.string.block_right) else rs(R.string.block_left))
         Verdict.TOO_MANY -> rs(R.string.verdict_too_many, r.blockCount)
@@ -693,7 +694,7 @@ private fun ColumnScope.TurnDoneRight(state: TurtleUiState, zh: Boolean, onEvent
     val lesson = state.lesson
     if (t.mode == TurnMode.GUESS) {
         Text(text = rs(R.string.guess_yours, t.yours.joinToString(" · ") { degText(abs(it)) }), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.titleMedium, maxLines = 3)
-        Text(text = rs(R.string.guess_turtle, t.turtles.joinToString(" · ") { degText(abs(it)) }), color = TurtleColors.InkYellow, style = TurtleType.titleMedium, maxLines = 3)
+        Text(text = rs(R.string.guess_turtle, t.turtles.joinToString(" · ") { degText(abs(it)) }), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.titleMedium, maxLines = 3)
         Spacer(modifier = Modifier.weight(1f))
         WordButton("back_to_blocks", rs(R.string.action_back_to_blocks), { onEvent(TurtleEvent.BackToBlocksClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_back, large = true)
         return
@@ -759,10 +760,8 @@ private fun ColumnScope.WalkDoneRight(state: TurtleUiState, zh: Boolean, onEvent
     Body(lesson.insight(zh), maxLines = 3)
     Spacer(modifier = Modifier.weight(1f))
     WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_chevron_right, large = true)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        WordButton("walk_again", rs(R.string.action_walk_again), { onEvent(TurtleEvent.WalkClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_walk, minWidth = 120.dp)
-        WordButton("back_to_blocks", rs(R.string.action_back_to_blocks), { onEvent(TurtleEvent.BackToBlocksClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_back, minWidth = 120.dp)
-    }
+    WordButton("walk_again", rs(R.string.action_walk_again), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
+    WordButton("back_to_blocks", rs(R.string.action_back_to_blocks), { onEvent(TurtleEvent.BackToBlocksClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_back)
 }
 
 @Suppress("unused")

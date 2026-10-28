@@ -165,7 +165,7 @@ internal fun SnackPanel(snack: Snack?, applied: Float = 1f, onWidth: (Float) -> 
             }
             Text(text = snackText(snack), color = ink, style = TurtleType.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (snack.kind == SnackKind.CLEARED) {
-                WordButton("undo", rs(R.string.action_undo), { onEvent(TurtleEvent.UndoClicked) }, minWidth = 96.dp, iconRes = R.drawable.ic_undo)
+                WordButton("undo", rs(R.string.action_undo), { onEvent(TurtleEvent.UndoClicked) }, primary = true, minWidth = 96.dp, iconRes = R.drawable.ic_undo)
             } else {
                 Spacer(modifier = Modifier.width(8.dp))
             }

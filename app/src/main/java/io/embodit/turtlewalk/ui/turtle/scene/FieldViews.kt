@@ -152,18 +152,21 @@ internal class TapeView(parent: Entity, cube: MeshResource, private val material
     val group = FieldGroup(parent, if (frame) "snapFrame" else "fieldTape")
     private val pool = BarPool(group.entity, cube, if (frame) materials.snapFrame else materials.tapePlacing, 90, if (frame) "frame" else "tape")
     private var laidFor = -1f
+    private var laidSolid = false
     private var edgeOf = IntArray(0)
     private var style: Material? = null
     private var alert: Side? = null
 
-    fun layout(sizeM: Float) {
-        if (abs(sizeM - laidFor) < 1e-4f) return
+    /** Lays the tape for [sizeM]; [solid] = snapped: the dashes close into solid lines (design +snapped). */
+    fun layout(sizeM: Float, solid: Boolean = false) {
+        if (abs(sizeM - laidFor) < 1e-4f && solid == laidSolid) return
         laidFor = sizeM
+        laidSolid = solid
         val h = sizeM / 2f
         val width = if (frame) 0.02f else 0.025f
         val n = 10
         val pitch = sizeM / n
-        val dash = pitch * 0.6f
+        val dash = if (solid) pitch else pitch * 0.6f
         val sides = ArrayList<Int>()
         var k = 0
         // edges: front (local -z), back, left, right
