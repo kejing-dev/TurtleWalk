@@ -937,7 +937,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
 
         // the code panel: lazy follow until the field is placed, fixed afterwards
         val hold = panelPressed || (lastPanelPressMs != NEVER && now - lastPanelPressMs < PANEL_HOLD_MS) || state.menuOpen || state.blocked != null
-        val at = state.panelAt
+        val at = if (debugPanelNear) null else state.panelAt
         if (at == null) {
             if (hasHead && head.position.length > 1e-3f) codeFollower.follow(head, planeTracker.all, planeTracker.count, now, hold)
             codePos = codeFollower.pose.position
@@ -1878,6 +1878,14 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         val w = walk ?: return "WALK no session"
         w.synthT = steps.coerceIn(0f, w.total)
         return "WALK synthetic at ${TurtleLog.f(w.synthT)} / ${TurtleLog.f(w.total)}"
+    }
+
+    private var debugPanelNear = false
+
+    override fun panelNear(on: Boolean): String {
+        debugPanelNear = on
+        if (on) codeFollower.park(head, planeTracker.all, SystemClock.elapsedRealtime())
+        return "PANEL near=$on"
     }
 
     override fun snap(): String {

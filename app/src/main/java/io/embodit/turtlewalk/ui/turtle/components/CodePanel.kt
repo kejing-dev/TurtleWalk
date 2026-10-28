@@ -168,6 +168,7 @@ internal fun LessonThumb(lesson: Lesson, modifier: Modifier) {
     Box(
         modifier =
             modifier.drawBehind {
+                drawRoundRect(TurtleColors.InfoChipBg, cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx()))
                 if (pts.isEmpty()) return@drawBehind
                 val minX = pts.minOf { it.first }
                 val maxX = pts.maxOf { it.first }
@@ -523,12 +524,14 @@ private fun ValueBar(state: TurtleUiState, onEvent: (TurtleEvent) -> Unit) {
     val b = state.selected?.let { Program.find(state.program, it) } ?: return
     val (bg, _) = blockColors(b.kind)
     Row(
-        modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(20.dp)).backgroundSolid(TurtleColors.InfoChipBg).padding(horizontal = 14.dp),
+        modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(20.dp)).backgroundSolid(PicoTheme.colorScheme.fillTertiary).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(painter = painterResource(blockIcon(b.kind)), contentDescription = null, modifier = Modifier.size(28.dp), tint = bg)
-        Text(text = blockName(b.kind), color = TurtleColors.InfoChipText, style = TurtleType.titleMedium, maxLines = 1, modifier = Modifier.width(96.dp))
+        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).backgroundSolid(bg), contentAlignment = Alignment.Center) {
+            Icon(painter = painterResource(blockIcon(b.kind)), contentDescription = null, modifier = Modifier.size(26.dp), tint = blockColors(b.kind).second)
+        }
+        Text(text = blockName(b.kind), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.titleMedium, maxLines = 1, modifier = Modifier.width(96.dp))
         val values = b.kind.values
         Segments(
             items = values.map { "value_${formatValue(it)}" to (formatValue(it) + if (b.isTurn) "°" else "") },
@@ -659,10 +662,8 @@ private fun ColumnScope.DrawnRight(state: TurtleUiState, zh: Boolean, onEvent: (
     Spacer(modifier = Modifier.weight(1f))
     if (right) {
         WordButton("turn_along", rs(R.string.action_turn_along), { onEvent(TurtleEvent.TurnAlongClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_turn, large = true)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_walk, minWidth = 120.dp)
-            WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_chevron_right, minWidth = 120.dp)
-        }
+        WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_chevron_right)
+        WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
         Text(text = if (lesson.walkOptional) rs(R.string.lesson9_walk) else rs(R.string.walk_needs), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1)
     } else {
         WordButton("again", rs(R.string.action_again), { onEvent(TurtleEvent.RunClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_play, large = true)
@@ -707,10 +708,8 @@ private fun ColumnScope.TurnDoneRight(state: TurtleUiState, zh: Boolean, onEvent
     Body(lesson.insight(zh))
     Spacer(modifier = Modifier.weight(1f))
     WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_chevron_right, large = true)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        if (t.total > 0) WordButton("turn_again", rs(R.string.action_turn_again), { onEvent(TurtleEvent.TurnAlongClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_turn, minWidth = 120.dp)
-        WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.weight(1f), iconRes = R.drawable.ic_walk, minWidth = 120.dp)
-    }
+    if (t.total > 0) WordButton("turn_again", rs(R.string.action_turn_again), { onEvent(TurtleEvent.TurnAlongClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_turn)
+    WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
 }
 
 @Composable

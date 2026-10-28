@@ -80,6 +80,7 @@ internal object DebugCommands {
                 val nums = word.substringAfter(' ', "").split(',', ' ').mapNotNull { it.trim().toFloatOrNull() }
                 TurtleLog.i(scene?.canvas(kind, nums.getOrElse(0) { 0f }, nums.getOrElse(1) { 0f }) ?: NO_SCENE)
             }
+            "panel_near" -> TurtleLog.i(scene?.panelNear(word != "off") ?: NO_SCENE)
             "snap" -> TurtleLog.i(scene?.snap() ?: NO_SCENE)
             "nofloor" -> host.dispatch(TurtleEvent.DebugNoFloor)
             "lost" -> host.dispatch(TurtleEvent.DebugTracking(true))

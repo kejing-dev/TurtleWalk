@@ -8,7 +8,7 @@
 # at ~1 fps and a pooled panel needs several frames after `show` before it is drawn: never capture without `fast on`.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEV=${DEV:-emulator-5560}
+DEV=${DEV:-emulator-5568}
 PKG=io.embodit.turtlewalk
 export PATH="$PATH:${LOCALAPPDATA}/Android/Sdk/platform-tools"
 H="bash $ROOT/tools/harness/emu.sh"
@@ -28,4 +28,4 @@ sleep "${SETTLE:-6}"
 cap "$name"
 if [ "${TWICE:-1}" = 1 ]; then sleep 1.5; cap "$name"; fi
 $H fast off >/dev/null 2>&1
-adb -s $DEV logcat -d -s DanceSteps:V 2>/dev/null | grep -E "STATE |FATAL|ANR" | tail -1 | cut -c1-260
+adb -s $DEV logcat -d -s TurtleWalk:V 2>/dev/null | grep -E "STATE |FATAL|ANR" | tail -1 | cut -c1-260

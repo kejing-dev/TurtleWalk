@@ -76,6 +76,9 @@ object TurtleProbe {
 
         /** Debug: the ghost field jumps to the wall's snap frame. */
         fun snap(): String
+
+        /** Debug: the code panel lazily follows the head again (1 m ahead) so screenshots can read it. */
+        fun panelNear(on: Boolean): String
     }
 
     @Volatile var host: Host? = null

@@ -265,7 +265,7 @@ internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshRe
         }
         // the heading V on the floor ahead of the nose
         for (sign in listOf(-1f, 1f)) {
-            part(cube, materials.nose, "nose$sign", Vec3(sign * 0.03f, 0.002f, -0.24f), Vec3(0.012f, 0.003f, 0.09f), Quat4.axisAngle(Vec3.UP, -sign * 0.6f))
+            part(cube, materials.nose, "nose$sign", Vec3(sign * 0.03f, 0.002f, -0.24f), Vec3(0.012f, 0.003f, 0.09f), Quat4.axisAngle(Vec3.UP, sign * 0.6f))
         }
     }
 
@@ -342,7 +342,8 @@ internal class RingView(parent: Entity, arc: MeshResource, dot: MeshResource, pr
         val rem = a - laps * 360f
         if (laps > lastLaps) flashUntil = nowMs + 600L
         lastLaps = laps
-        val n = if (laps > 0 && rem < 0.5f) 0 else floor(rem / 5f + 1e-3f).toInt().coerceIn(0, 72)
+        // a whole number of laps shows the ring closed (the shape is done), not empty
+        val n = if (laps > 0 && rem < 0.5f) 72 else floor(rem / 5f + 1e-3f).toInt().coerceIn(0, 72)
         val s = if (deg >= 0f) 1 else -1
         val flashing = nowMs < flashUntil
         val key = if (flashing) -2 else n
