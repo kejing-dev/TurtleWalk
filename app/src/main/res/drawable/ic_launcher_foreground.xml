@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Turtle Walk icon (design `icon`): a square route in white, three sides solid and the bottom side dashed (the
+     route starts at the lower right), the classic Logo triangle turtle at the lower left pointing up, and a small
+     arc in the upper right corner (= a turn). Background: @color/ic_launcher_background (bay teal #1A7F9E). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M74,72V38a4,4 0 0,0 -4,-4H38a4,4 0 0,0 -4,4V62" android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M46,74h4M56,74h4M66,74h4" android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000" />
+    <path android:pathData="M60,44a8,8 0 0,1 8,8" android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000" />
+    <path android:pathData="M34,62.5l7.5,14.5a1.6,1.6 0 0,1 -1.4,2.3H27.9a1.6,1.6 0 0,1 -1.4,-2.3z" android:fillColor="#FFFFFFFF" />
+</vector>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English (default). The Chinese mirror is in values-zh (design `i18n`). -->
+<resources>
+    <string name="app_name">Turtle Walk</string>
+
+    <!-- blocks -->
+    <string name="block_forward">Forward</string>
+    <string name="block_left">Turn left</string>
+    <string name="block_right">Turn right</string>
+    <string name="block_repeat">Repeat</string>
+    <string name="unit_steps">%1$s</string>
+    <string name="unit_times">%1$s×</string>
+
+    <!-- lessons -->
+    <string name="lessons_title">Turtle · Pick a lesson</string>
+    <string name="lesson_n">Lesson %1$d</string>
+    <string name="lesson_drawn">Drawn</string>
+    <string name="lesson_turned">Turned</string>
+    <string name="lesson_walked">Walked</string>
+    <string name="lessons_field">Field %1$s m · 1 step = %2$s m</string>
+    <string name="lessons_no_field">Pick a lesson, then place the field</string>
+    <string name="goal_1">Walk the turtle to the star</string>
+    <string name="goal_2">Turn a corner to reach the star</string>
+    <string name="goal_3">Draw a square, 1 step a side</string>
+    <string name="goal_4">The same square with 3 blocks or fewer</string>
+    <string name="goal_5">Draw a triangle, 1 step a side</string>
+    <string name="goal_6">Draw a pentagon, 1 step a side</string>
+    <string name="goal_7">Draw a star, 1.5 steps a side</string>
+    <string name="goal_8">Draw a circle of 12 small steps</string>
+    <string name="goal_9">Draw a flower of 5 triangle petals</string>
+    <string name="goal_10">Draw a little house in one line</string>
+
+    <!-- placing -->
+    <string name="placing_title">Place the field</string>
+    <string name="placing_body">Point the controller at the floor. The field starts right in front of you, no need to walk. Clear the floor first.</string>
+    <string name="placing_hint">Ray at the floor · stick left / right turns · snaps near a wall</string>
+    <string name="step_is">1 step = %1$s m</string>
+    <string name="rotate45">Turn 45°</string>
+    <string name="place_here">Place here</string>
+    <string name="cramped">Furniture on the %1$s: move %2$s %3$d cm, or use a smaller field</string>
+    <string name="wall_crosses">A wall runs through the field: move it, or use a smaller field</string>
+    <string name="front_too_close">Too close to the wall ahead for the code panel: move back %1$d cm</string>
+    <string name="use_smaller">Use %1$s m</string>
+    <string name="est_floor_line">Estimated floor (head − 1.55 m)</string>
+    <string name="adjust_height">Height</string>
+    <string name="side_left">left</string>
+    <string name="side_right">right</string>
+    <string name="side_front">front</string>
+    <string name="side_back">back</string>
+
+    <!-- coding -->
+    <string name="lesson_title">Lesson %1$d · %2$s</string>
+    <string name="palette_title">Blocks</string>
+    <string name="program_title">Program</string>
+    <string name="program_empty">Tap a block on the left to add it here</string>
+    <string name="into_repeat">+ Into repeat</string>
+    <string name="turn_sum">Total turn</string>
+    <string name="action_run">Draw it</string>
+    <string name="action_guess">Turn first</string>
+    <string name="action_turn_along">Turn along</string>
+    <string name="action_hint">Hint</string>
+    <string name="action_clear">Clear</string>
+    <string name="hint_answer">Answer</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="delete">Delete</string>
+
+    <!-- running -->
+    <string name="turned">Turned</string>
+    <string name="speed_slow">Slow</string>
+    <string name="speed_fast">Fast</string>
+    <string name="action_finish">Finish</string>
+    <string name="action_stop">Stop</string>
+
+    <!-- drawn -->
+    <string name="turtle_turned">The turtle turned %1$d°</string>
+    <plurals name="laps">
+        <item quantity="one">= %1$d full turn</item>
+        <item quantity="other">= %1$d full turns</item>
+    </plurals>
+    <string name="verdict_match">Drawn right!</string>
+    <string name="verdict_open">Not back at the start · %1$s steps off</string>
+    <string name="verdict_spin">Back at the start: turn %1$d° more to face the start way</string>
+    <string name="verdict_mirror">Wrong way round: try %1$s</string>
+    <string name="verdict_too_many">Right, but %1$d blocks: try Repeat</string>
+    <string name="verdict_different">Not the target shape</string>
+    <string name="verdict_out">The route left the field</string>
+    <string name="out_note">Part of the route left the field</string>
+    <string name="sixty_hint">The turtle turns by how much its direction changes: try a bigger angle</string>
+    <string name="action_again">Draw again</string>
+    <string name="action_next">Next lesson</string>
+    <string name="action_lessons">Lessons</string>
+    <string name="action_walk">Walk it (optional)</string>
+    <string name="walk_needs">Needs 2 × 2 m clear</string>
+
+    <!-- turn along / turn first -->
+    <string name="turn_body">The turtle turned: turn on the spot too</string>
+    <string name="guess_body">Turn to where the next side goes, then tap Done</string>
+    <string name="you_turned">You turned</string>
+    <string name="corner_of">Corner %1$d of %2$d</string>
+    <string name="action_turned">Done turning</string>
+    <string name="action_skip_end">Skip to the end</string>
+    <string name="turn_compare">Turtle %1$d° · You %2$d°</string>
+    <string name="full_turn">A full turn</string>
+    <string name="action_turn_again">Turn again</string>
+    <string name="guess_yours">Your turns: %1$s</string>
+    <string name="guess_turtle">The turtle turns: %1$s</string>
+    <string name="action_back_to_blocks">Back to blocks</string>
+    <string name="no_corners">A straight line: no turning</string>
+    <string name="lesson9_watch">15 turns: you may just watch</string>
+
+    <!-- walk (optional) -->
+    <string name="walk_ready_body">Stand on the turtle\'s start, facing the arrow</string>
+    <string name="to_start">%1$s m to the start</string>
+    <string name="standing_ok">Ready</string>
+    <string name="action_start_walk">Start walking</string>
+    <string name="action_no_walk">Not now</string>
+    <string name="segment_of">Segment %1$d of %2$d</string>
+    <string name="home_body">Finally turn back to the start direction</string>
+    <string name="mean_dev">Off the route by %1$d cm on average</string>
+    <string name="walk_great">Spot on</string>
+    <string name="walk_ok">Not bad</string>
+    <string name="walk_again">Walk it again</string>
+    <string name="action_walk_again">Walk again</string>
+    <string name="lesson9_walk">11.25 steps: you may just watch</string>
+
+    <!-- snackbar -->
+    <string name="snack_scanning">Look slowly around the floor</string>
+    <string name="snack_est_floor">Estimated floor: adjust its height in More</string>
+    <string name="snack_lost">Tracking lost · look around</string>
+    <string name="snack_not_on_start">Stand on the flashing footprints, facing the arrow</string>
+    <string name="snack_off_path">Back onto the yellow line</string>
+    <string name="snack_snapped">Lined up with the wall</string>
+    <string name="snack_cleared">Cleared</string>
+    <string name="snack_too_long">Program too long (%1$d segments, 120 at most)</string>
+    <string name="snack_limit_blocks">16 blocks at most</string>
+    <string name="snack_limit_nesting">Repeat nests 2 deep at most</string>
+    <string name="action_undo">Undo</string>
+
+    <!-- menu -->
+    <string name="lang_system">System language</string>
+    <string name="lang_zh">中文</string>
+    <string name="lang_en">English</string>
+    <string name="menu_bring">Bring the field to me</string>
+    <string name="menu_floor">Floor height</string>
+    <string name="menu_lessons">Lessons</string>
+    <string name="menu_replace">Place the field again</string>
+    <string name="menu_exit">Exit</string>
+    <string name="floor_up">Floor up</string>
+    <string name="floor_down">Floor down</string>
+    <string name="back">Back</string>
+    <string name="more">More</string>
+
+    <!-- blocked -->
+    <string name="blocked_title">Spatial features unavailable</string>
+    <string name="blocked_body">Head tracking and plane detection are needed. Check the permission and retry.</string>
+    <string name="action_exit">Exit</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- coachmarks -->
+    <string name="coach_1">Hold the trigger on the field to drag it; stick left / right turns, up / down scales</string>
+    <string name="coach_2">Look at a block and pinch to add it to the program</string>
+    <string name="coach_3">Now turn on the spot along with the turtle</string>
+    <string name="action_got_it">Got it</string>
+</resources>

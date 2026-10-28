@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app icon background: bay teal #1A7F9E, registered in icon-colors.md (design icon.background) -->
+    <color name="ic_launcher_background">#1A7F9E</color>
+</resources>

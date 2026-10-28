@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 中文（design `i18n`）。 -->
+<resources>
+    <string name="app_name">小海龟编程</string>
+
+    <!-- blocks -->
+    <string name="block_forward">前进</string>
+    <string name="block_left">左转</string>
+    <string name="block_right">右转</string>
+    <string name="block_repeat">重复</string>
+    <string name="unit_steps">%1$s 步</string>
+    <string name="unit_times">%1$s 次</string>
+
+    <!-- lessons -->
+    <string name="lessons_title">小海龟 · 选一课</string>
+    <string name="lesson_n">第 %1$d 课</string>
+    <string name="lesson_drawn">画对</string>
+    <string name="lesson_turned">转过</string>
+    <string name="lesson_walked">走过</string>
+    <string name="lessons_field">场地 %1$s m · 1 步 = %2$s m</string>
+    <string name="lessons_no_field">先选一课，再摆场地</string>
+    <string name="goal_1">让海龟走到星星</string>
+    <string name="goal_2">拐个弯拿到星星</string>
+    <string name="goal_3">画一个边长 1 步的正方形</string>
+    <string name="goal_4">还是正方形，积木不超过 3 块</string>
+    <string name="goal_5">画一个边长 1 步的三角形</string>
+    <string name="goal_6">画一个边长 1 步的五边形</string>
+    <string name="goal_7">画一颗边长 1.5 步的五角星</string>
+    <string name="goal_8">用 12 个小步画一个圆</string>
+    <string name="goal_9">画一朵 5 片三角形花瓣的花</string>
+    <string name="goal_10">一笔画出一座小房子</string>
+
+    <!-- placing -->
+    <string name="placing_title">摆场地</string>
+    <string name="placing_body">用手柄指向地板放场地，默认就在你面前，不用走动。先清开地上的东西。</string>
+    <string name="placing_hint">射线指地板 · 摇杆左右转动 · 靠近墙会自动对齐</string>
+    <string name="step_is">1 步 = %1$s m</string>
+    <string name="rotate45">转 45°</string>
+    <string name="place_here">放在这里</string>
+    <string name="cramped">%1$s边有家具，往%2$s挪 %3$d cm，或换小一点的场地</string>
+    <string name="wall_crosses">有墙穿过场地，挪开一点或换小一点的场地</string>
+    <string name="front_too_close">前面离墙太近，编程台放不下：往后挪 %1$d cm</string>
+    <string name="use_smaller">换 %1$s m</string>
+    <string name="est_floor_line">用估计地面（头高 − 1.55 m）</string>
+    <string name="adjust_height">调高度</string>
+    <string name="side_left">左</string>
+    <string name="side_right">右</string>
+    <string name="side_front">前</string>
+    <string name="side_back">后</string>
+
+    <!-- coding -->
+    <string name="lesson_title">第 %1$d 课 %2$s</string>
+    <string name="palette_title">积木</string>
+    <string name="program_title">程序</string>
+    <string name="program_empty">点左边的积木，加到这里</string>
+    <string name="into_repeat">+ 放进重复</string>
+    <string name="turn_sum">转角合计</string>
+    <string name="action_run">画出来</string>
+    <string name="action_guess">先转转看</string>
+    <string name="action_turn_along">原地跟着转</string>
+    <string name="action_hint">提示</string>
+    <string name="action_clear">清空</string>
+    <string name="hint_answer">答案</string>
+    <string name="move_up">上移</string>
+    <string name="move_down">下移</string>
+    <string name="delete">删除</string>
+
+    <!-- running -->
+    <string name="turned">已转</string>
+    <string name="speed_slow">慢</string>
+    <string name="speed_fast">快</string>
+    <string name="action_finish">画完</string>
+    <string name="action_stop">停</string>
+
+    <!-- drawn -->
+    <string name="turtle_turned">海龟转了 %1$d°</string>
+    <plurals name="laps">
+        <item quantity="other">= %1$d 圈</item>
+    </plurals>
+    <string name="verdict_match">画对了</string>
+    <string name="verdict_open">没回到起点 · 差 %1$s 步</string>
+    <string name="verdict_spin">回到起点了，还要再转 %1$d° 才朝回原来的方向</string>
+    <string name="verdict_mirror">方向反了，换成%1$s试试</string>
+    <string name="verdict_too_many">画对了，但用了 %1$d 块——试试重复</string>
+    <string name="verdict_different">和目标不一样</string>
+    <string name="verdict_out">路线走出了场地</string>
+    <string name="out_note">有一段走出了场地</string>
+    <string name="sixty_hint">海龟转的是走的方向改变了多少，试试更大的角</string>
+    <string name="action_again">再画一遍</string>
+    <string name="action_next">下一课</string>
+    <string name="action_lessons">课程列表</string>
+    <string name="action_walk">跟着走一遍（可选）</string>
+    <string name="walk_needs">要 2 × 2 m 空地</string>
+
+    <!-- turn along / turn first -->
+    <string name="turn_body">海龟拐弯了，你也原地转过去</string>
+    <string name="guess_body">转到你觉得下一条边的方向，再点「转好了」</string>
+    <string name="you_turned">你转了</string>
+    <string name="corner_of">第 %1$d 个拐角 / %2$d</string>
+    <string name="action_turned">转好了</string>
+    <string name="action_skip_end">跳到最后</string>
+    <string name="turn_compare">海龟 %1$d° · 你 %2$d°</string>
+    <string name="full_turn">转了一整圈</string>
+    <string name="action_turn_again">再转一遍</string>
+    <string name="guess_yours">你猜的转角：%1$s</string>
+    <string name="guess_turtle">海龟要转：%1$s</string>
+    <string name="action_back_to_blocks">回去写积木</string>
+    <string name="no_corners">一条线，不用转</string>
+    <string name="lesson9_watch">要转 15 次，可以只看</string>
+
+    <!-- walk (optional) -->
+    <string name="walk_ready_body">站到海龟的起点，面朝箭头</string>
+    <string name="to_start">离起点 %1$s m</string>
+    <string name="standing_ok">站好了</string>
+    <string name="action_start_walk">开始走</string>
+    <string name="action_no_walk">不走了</string>
+    <string name="segment_of">第 %1$d 段 / %2$d</string>
+    <string name="home_body">最后转回起点的方向</string>
+    <string name="mean_dev">路线平均偏 %1$d cm</string>
+    <string name="walk_great">走得很准</string>
+    <string name="walk_ok">还行</string>
+    <string name="walk_again">再走一遍</string>
+    <string name="action_walk_again">再走一遍</string>
+    <string name="lesson9_walk">要走 11.25 步，可以只看</string>
+
+    <!-- snackbar -->
+    <string name="snack_scanning">慢慢看看地面</string>
+    <string name="snack_est_floor">用估计地面，可在更多里调高度</string>
+    <string name="snack_lost">定位丢失 · 环顾四周</string>
+    <string name="snack_not_on_start">先站到闪的脚印上，面朝箭头</string>
+    <string name="snack_off_path">回到黄线上</string>
+    <string name="snack_snapped">已对齐墙边</string>
+    <string name="snack_cleared">已清空</string>
+    <string name="snack_too_long">程序太长了（展开后 %1$d 段，最多 120）</string>
+    <string name="snack_limit_blocks">最多 16 块积木</string>
+    <string name="snack_limit_nesting">重复最多套 2 层</string>
+    <string name="action_undo">撤销</string>
+
+    <!-- menu -->
+    <string name="lang_system">跟随系统</string>
+    <string name="lang_zh">中文</string>
+    <string name="lang_en">English</string>
+    <string name="menu_bring">把场地拉到面前</string>
+    <string name="menu_floor">地面高度</string>
+    <string name="menu_lessons">课程列表</string>
+    <string name="menu_replace">重新摆场地</string>
+    <string name="menu_exit">退出</string>
+    <string name="floor_up">地面升高</string>
+    <string name="floor_down">地面降低</string>
+    <string name="back">返回</string>
+    <string name="more">更多</string>
+
+    <!-- blocked -->
+    <string name="blocked_title">空间能力不可用</string>
+    <string name="blocked_body">需要头部追踪和平面识别。检查权限后重试。</string>
+    <string name="action_exit">退出</string>
+    <string name="action_retry">重试</string>
+
+    <!-- coachmarks -->
+    <string name="coach_1">手柄按住扳机能拖动场地，摇杆左右转、上下缩放</string>
+    <string name="coach_2">看向积木，捏一下就加进程序</string>
+    <string name="coach_3">现在原地跟着海龟转一圈</string>
+    <string name="action_got_it">知道了</string>
+</resources>
