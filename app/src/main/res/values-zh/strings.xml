@@ -32,7 +32,8 @@
 
     <!-- placing -->
     <string name="placing_title">摆场地</string>
-    <string name="placing_body">用手柄指向地板放场地，默认就在你面前，不用走动。先清开地上的东西。</string>
+    <string name="placing_body">用手柄射线指向地板上想放场地的地方（或看着地板捏一下）。场地正面和海龟都会朝向你。先清开地上的东西。</string>
+    <string name="placing_aim">还没指到地板：用手柄射线指向地板，或看着地板捏一下</string>
     <string name="placing_hint">射线指地板 · 摇杆左右转动 · 靠近墙会自动对齐</string>
     <string name="step_is">1 步 = %1$s m</string>
     <string name="rotate45">转 45°</string>
@@ -142,10 +143,12 @@
     <string name="lang_system_short">跟随系统</string>
     <string name="lang_zh">中文</string>
     <string name="lang_en">English</string>
-    <string name="menu_bring">把场地拉到面前</string>
+    <string name="menu_bring">把面板叫回面前</string>
+    <string name="action_recall">叫回面前</string>
+    <string name="credit_turtle">海龟模型：nebulousflynn / RISD Nature Lab · CC BY 4.0</string>
     <string name="menu_floor">地面高度</string>
     <string name="menu_lessons">课程列表</string>
-    <string name="menu_replace">重新摆场地</string>
+    <string name="menu_replace">移动场地</string>
     <string name="menu_exit">退出</string>
     <string name="floor_up">地面升高</string>
     <string name="floor_down">地面降低</string>

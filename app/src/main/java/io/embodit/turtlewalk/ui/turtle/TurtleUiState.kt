@@ -103,8 +103,10 @@ data class TurtleUiState(
     val fieldM: Float = 2f,
     /** Head height when the field was placed (the code panel's height follows it). */
     val headYAtPlace: Float = 1.6f,
-    /** Where the code panel stands once the field is placed (Stage), and its yaw. */
-    val panelAt: FloorPose? = null,
+    /** "Bring the panel to me" presses (taste D21); the scene places the panel again when this grows. */
+    val panelRecalls: Int = 0,
+    /** Placing: the controller ray (or a pinch) has put a ghost field on the floor; "place here" needs it. */
+    val ghost: Boolean = false,
     val floorY: Float = 0f,
     val hasFloor: Boolean = false,
     /** No floor plane after 5 s: an estimated floor (head - 1.55 m) stands in (taste D7). */
@@ -143,7 +145,7 @@ data class TurtleUiState(
         get() = !hasFloor && (phase == Phase.LESSONS || phase == Phase.PLACING)
 
     val canPlace: Boolean
-        get() = hasFloor && placeCheck.canPlace
+        get() = hasFloor && ghost && placeCheck.canPlace
 
     /** A block of [kind] may not be added at the cursor (16 top blocks / 2 nesting levels). */
     fun refusal(kind: BlockKind): Program.Refusal? = Program.refusal(program, cursor, kind)
@@ -265,7 +267,7 @@ sealed class TurtleEvent {
 
     data class LanguageSelected(val language: LanguagePref) : TurtleEvent()
 
-    data object BringFieldClicked : TurtleEvent()
+    data object RecallPanelClicked : TurtleEvent()
 
     data object ReplaceFieldClicked : TurtleEvent()
 

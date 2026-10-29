@@ -198,9 +198,6 @@ object TurtleRules {
     // the field in the room
     const val FIELD_BACK_GAP_M = 0.4f
     const val FIELD_MIN_GAP_M = 0.2f
-    const val PANEL_OUTSIDE_FRONT_M = 0.35f
-    const val PANEL_BELOW_HEAD_M = 0.55f
-    const val PANEL_MIN_HEIGHT_M = 0.75f
     const val PANEL_LEAN_DEG = 30f
     const val FRONT_WALL_MIN_M = 0.45f
     const val STICK_DEAD_ZONE = 0.15f

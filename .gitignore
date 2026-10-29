@@ -30,3 +30,7 @@ output.json
 
 # Emulator harness runtime state
 tools/harness/.state/
+
+# 3D model files are not committed (see ASSETS.md: download the CC BY 4.0 source, then tools/turtle_model.py export)
+*.glb
+raw/

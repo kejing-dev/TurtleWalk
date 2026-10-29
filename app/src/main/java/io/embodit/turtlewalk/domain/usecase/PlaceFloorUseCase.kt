@@ -36,6 +36,14 @@ data class FloorPose(val center: Vec3, val yaw: Float) {
         fun yawOf(forward: Vec3, fallback: Float): Float =
             if (kotlin.math.hypot(forward.x, forward.z) < 0.05f) fallback else atan2(-forward.x, -forward.z)
 
+        /**
+         * Taste D10 (placement facing): the yaw whose front (+y of the field, the turtle's heading 0, the
+         * chevron and the readable side of every floor mark) points from [content] to [user], level. Computed
+         * once when something is placed and locked afterwards; never from a ray direction, the world origin or
+         * an earlier yaw.
+         */
+        fun yawToward(content: Vec3, user: Vec3, fallback: Float = 0f): Float = yawOf(Vec3(user.x - content.x, 0f, user.z - content.z), fallback)
+
         fun wrapRad(a: Float): Float {
             var d = a
             while (d > PI.toFloat()) d -= (2 * PI).toFloat()

@@ -32,7 +32,8 @@
 
     <!-- placing -->
     <string name="placing_title">Place the field</string>
-    <string name="placing_body">Point the controller at the floor. The field starts right in front of you, no need to walk. Clear the floor first.</string>
+    <string name="placing_body">Point the controller ray at the floor where the field should go (or look at the floor and pinch). Its front and the turtle will face you. Clear the floor first.</string>
+    <string name="placing_aim">Not on the floor yet: point the controller ray at the floor, or look at it and pinch</string>
     <string name="placing_hint">Ray at the floor · stick left / right turns · snaps near a wall</string>
     <string name="step_is">1 step = %1$s m</string>
     <string name="rotate45">Turn 45°</string>
@@ -143,10 +144,12 @@
     <string name="lang_system_short">System</string>
     <string name="lang_zh">中文</string>
     <string name="lang_en">English</string>
-    <string name="menu_bring">Bring the field to me</string>
+    <string name="menu_bring">Bring the panel to me</string>
+    <string name="action_recall">Bring here</string>
+    <string name="credit_turtle">Turtle model: nebulousflynn / RISD Nature Lab · CC BY 4.0</string>
     <string name="menu_floor">Floor height</string>
     <string name="menu_lessons">Lessons</string>
-    <string name="menu_replace">Place the field again</string>
+    <string name="menu_replace">Move the field</string>
     <string name="menu_exit">Exit</string>
     <string name="floor_up">Floor up</string>
     <string name="floor_down">Floor down</string>

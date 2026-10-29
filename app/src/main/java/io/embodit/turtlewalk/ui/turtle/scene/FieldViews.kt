@@ -232,54 +232,85 @@ internal class TapeView(parent: Entity, cube: MeshResource, private val material
 }
 
 /**
- * The turtle (design `entities3d.turtle`): a pointer made of basic shapes, not a character. A flattened
- * half-sphere shell (240 x 80 mm) with six light patches, a head ball (70 mm) ahead, four flat flippers and a
- * yellow V on the floor ahead of its nose. 13 entities; its size does not follow the step.
+ * The turtle (design `entities3d.turtle`, taste B12 since v0.1.2): a real pond turtle model, CC BY 4.0
+ * ("Turtle By RISD Naturelab - optimised" by nebulousflynn, see ASSETS.md), exported by tools/turtle_model.py
+ * Y-up with the head along -Z and the feet on y = 0, length 1, scaled here to [LENGTH_M]. Walking is the whole
+ * body moving with a small waddle (a 7 mm bob, 3 degree roll and a shuffle of the yaw per stride); turning on
+ * the spot rocks it slightly. When the model cannot load, a shape-made turtle stands in: shell above the floor,
+ * head ahead, flippers at the sides, a yellow V on the floor ahead of the nose.
  */
-internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshResource, cube: MeshResource, materials: SceneMaterials) {
+internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshResource, cube: MeshResource, materials: SceneMaterials, model: Entity?) {
     val group = Entity().named("turtle")
+    private val body = Entity().named("turtle_body")
     private var at = P2(Float.NaN, 0f)
     private var heading = Float.NaN
     private var step = -1f
     private var on = true
+    private var phase = 0f
+    private var lastMs = 0L
 
     init {
         parent.addChild(group)
-        fun part(mesh: MeshResource, m: Material, name: String, pos: Vec3, scale: Vec3, rot: Quat4 = Quat4.IDENTITY) {
-            val e = ModelEntity(mesh, m)
-            e.named("turtle_$name")
-            group.addChild(e)
-            e.setLocal(position = pos, rotation = rot, scale = scale)
+        group.addChild(body)
+        if (model != null) {
+            body.addChild(model)
+            model.setLocal(position = Vec3.ZERO, rotation = Quat4.IDENTITY, scale = Vec3(LENGTH_M, LENGTH_M, LENGTH_M))
+        } else {
+            fun part(mesh: MeshResource, m: Material, name: String, pos: Vec3, scale: Vec3, rot: Quat4 = Quat4.IDENTITY) {
+                val e = ModelEntity(mesh, m)
+                e.named("turtle_$name")
+                body.addChild(e)
+                e.setLocal(position = pos, rotation = rot, scale = scale)
+            }
+            // the shell's rim sits 2 cm up so the dome reads as a shell from every side (not a ball half in the floor)
+            part(sphere, materials.shell, "shell", Vec3(0f, 0.02f, 0f), Vec3(0.12f, 0.07f, 0.12f))
+            for (i in 0 until 6) {
+                val a = 2 * PI * i / 6
+                val r = 0.055f
+                val x = (kotlin.math.sin(a) * r).toFloat()
+                val z = (-kotlin.math.cos(a) * r).toFloat()
+                val y = 0.02f + 0.07f * kotlin.math.sqrt((1f - (r / 0.12f) * (r / 0.12f)).coerceAtLeast(0f)) - 0.004f
+                part(cylinder, materials.patch, "patch$i", Vec3(x, y, z), Vec3(1f, 1f, 1f))
+            }
+            part(sphere, materials.skin, "head", Vec3(0f, 0.04f, -0.15f), Vec3(0.035f, 0.035f, 0.035f))
+            for ((i, p) in listOf(-1f to -1f, 1f to -1f, -1f to 1f, 1f to 1f).withIndex()) {
+                val (sx, sz) = p
+                part(sphere, materials.skin, "flipper$i", Vec3(sx * 0.11f, 0.012f, sz * 0.07f), Vec3(0.045f, 0.012f, 0.028f), Quat4.axisAngle(Vec3.UP, sx * sz * 0.6f))
+            }
         }
-        part(sphere, materials.shell, "shell", Vec3(0f, 0f, 0f), Vec3(0.12f, 0.08f, 0.12f))
-        for (i in 0 until 6) {
-            val a = 2 * PI * i / 6
-            val r = 0.055f
-            val x = (kotlin.math.sin(a) * r).toFloat()
-            val z = (-kotlin.math.cos(a) * r).toFloat()
-            // the patches sit on the shell's slope at r: height of the ellipsoid there
-            val y = 0.08f * kotlin.math.sqrt((1f - (r / 0.12f) * (r / 0.12f)).coerceAtLeast(0f)) - 0.004f
-            part(cylinder, materials.patch, "patch$i", Vec3(x, y, z), Vec3(1f, 1f, 1f))
-        }
-        part(sphere, materials.skin, "head", Vec3(0f, 0.035f, -0.15f), Vec3(0.035f, 0.035f, 0.035f))
-        for ((i, p) in listOf(-1f to -1f, 1f to -1f, -1f to 1f, 1f to 1f).withIndex()) {
-            val (sx, sz) = p
-            part(sphere, materials.skin, "flipper$i", Vec3(sx * 0.11f, 0.01f, sz * 0.07f), Vec3(0.045f, 0.012f, 0.028f), Quat4.axisAngle(Vec3.UP, sx * sz * 0.6f))
-        }
-        // the heading V on the floor ahead of the nose
+        // the heading V on the floor ahead of the nose (tip ahead)
         for (sign in listOf(-1f, 1f)) {
-            part(cube, materials.nose, "nose$sign", Vec3(sign * 0.03f, 0.002f, -0.24f), Vec3(0.012f, 0.003f, 0.09f), Quat4.axisAngle(Vec3.UP, sign * 0.6f))
+            val e = ModelEntity(cube, materials.nose)
+            e.named("turtle_nose$sign")
+            group.addChild(e)
+            e.setLocal(position = Vec3(sign * 0.03f, 0.002f, -LENGTH_M * 0.5f - 0.08f), rotation = Quat4.axisAngle(Vec3.UP, sign * 0.6f), scale = Vec3(0.012f, 0.003f, 0.09f))
         }
     }
 
-    /** At field point [p] (steps) facing [deg]. */
+    /** At field point [p] (steps) facing [deg]; moving or turning advances the waddle. */
     fun place(p: P2, deg: Float, stepM: Float) {
-        if (p == at && deg == heading && stepM == step) return
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (p == at && deg == heading && stepM == step) {
+            if (now - lastMs > 250L && phase != 0f) {
+                phase = 0f
+                body.setLocal(position = Vec3.ZERO, rotation = Quat4.IDENTITY)
+            }
+            return
+        }
+        val moved = if (at.x.isNaN() || step <= 0f) 0f else at.distanceTo(p) * stepM
+        val turned = if (heading.isNaN()) 0f else abs(deg - heading)
         at = p
         heading = deg
         step = stepM
+        lastMs = now
         val (x, z) = p.local(stepM)
-        group.setLocal(position = Vec3(x, 0.003f, z), rotation = headingRotation(deg))
+        group.setLocal(position = Vec3(x, 0.001f, z), rotation = headingRotation(deg))
+        if (moved > 0.5f || turned > 90f) return // a jump (new run, lesson change), not a walk
+        phase += moved / STRIDE_M * (2f * PI.toFloat()) + Math.toRadians(turned.toDouble()).toFloat() * 1.5f
+        val bob = abs(kotlin.math.sin(phase)) * BOB_M
+        val roll = kotlin.math.sin(phase) * ROLL_RAD
+        val shuffle = kotlin.math.sin(phase * 0.5f) * SHUFFLE_RAD
+        body.setLocal(position = Vec3(0f, bob, 0f), rotation = Quat4.axisAngle(Vec3.UP, shuffle) * Quat4.axisAngle(Vec3(0f, 0f, 1f), roll))
     }
 
     fun setShown(shown: Boolean) {
@@ -287,6 +318,17 @@ internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshRe
             on = shown
             group.enabled = shown
         }
+    }
+
+    companion object {
+        const val MODEL_ASSET = "models/turtle.glb"
+
+        /** Shell length on the floor (design: about 240 mm shell, the head adds a little). */
+        const val LENGTH_M = 0.28f
+        private const val STRIDE_M = 0.09f
+        private const val BOB_M = 0.007f
+        private const val ROLL_RAD = 0.05f
+        private const val SHUFFLE_RAD = 0.04f
     }
 }
 

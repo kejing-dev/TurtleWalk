@@ -15,6 +15,7 @@ import com.pico.spatial.core.ecs.ViewCoordinateSpace
 import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector3
 import com.pico.spatial.ui.foundation.content.SpatialViewAttachments
+import com.pico.spatial.ui.foundation.gesture.SpatialDragValue
 import com.pico.spatial.ui.foundation.gesture.SpatialTapValue
 import io.embodit.turtlewalk.domain.model.Lesson
 import io.embodit.turtlewalk.domain.model.P2
@@ -133,7 +134,17 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
     private var homeArrow: FloorArrow? = null
     private var startArrow: FloorArrow? = null
 
-    private val codeFollower = Follower("code", Follower.CODE_OFFSET, CODE_HALF_EXTENTS, Quat4.axisAngle(Vec3.RIGHT, -Math.toRadians(12.0).toFloat()), nearM = 0.6f, farM = 1.6f)
+    // the code panel (taste D21): fixed in the room, a drag handle under it, "bring it to me" places it again
+    private var panelPos: Vec3? = null
+    private var panelYaw = 0f
+    private var panelPitch = 0f
+    private var panelRecallsSeen = -1
+    private var handle: Entity? = null
+    private var panelDrag: PanelDrag? = null
+
+    private class PanelDrag(val start: Vec3, val gain: Float) {
+        var totalPx = Vec3.ZERO
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var buildJob: Job? = null
 
@@ -165,6 +176,8 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
     private var placingCenter: Vec3? = null
     private var placingTarget: Vec3? = null
     private var placingYaw = 0f
+    private var yawOffset = 0f
+    private var autoSized = false
     private var stickTurnDeg = 0f
     private var snapped = false
     private var lastRotateRequests = 0
@@ -254,7 +267,6 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         startTrackers()
         ActiveScene.scene = this
         bindPanels(attachments)
-        codeFollower.reset()
         buildJob =
             scope.launch {
                 try {
@@ -350,7 +362,18 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         // batch 5: the turtle, you
         val sphere = pacedMesh { sh.keep(MeshFactory.sphere("sphere")) }
         val patch = pacedMesh { sh.keep(MeshFactory.cylinder(0.018f, 0.006f, "patch", segments = 6)) }
-        turtle = TurtleBody(fg.entity, sphere, patch, cube, m).also { it.setShown(false) }
+        // taste B12: a real CC BY 4.0 turtle (tools/turtle_model.py export: Y-up, head along -Z, feet on y = 0, length 1)
+        val t0Model = SystemClock.elapsedRealtime()
+        val model = runCatching { Entity.loadSuspend("asset://" + TurtleBody.MODEL_ASSET) }.onFailure { TurtleLog.e("MODEL turtle load failed: $it") }.getOrNull()
+        TurtleLog.i("MODEL turtle loaded=${model != null} ms=${SystemClock.elapsedRealtime() - t0Model}")
+        turtle = TurtleBody(fg.entity, sphere, patch, cube, m, model).also { it.setShown(false) }
+        handle =
+            ModelEntity(cube, m.handle).also { h ->
+                h.named(HANDLE_NAME)
+                root.addChild(h)
+                h.tapBox(Vec3(1f, 1f, 1f))
+                h.enabled = false
+            }
         val youDisc = pacedMesh { sh.keep(MeshFactory.disc(0.06f, "youDisc", segments = 28)) }
         val youRingMesh = pacedMesh { sh.keep(MeshFactory.ring(0.066f, 0.078f, "youRing", segments = 28)) }
         youDot = ModelEntity(youDisc, m.you).also { it.named("youDot"); fg.entity.addChild(it); it.enabled = false }
@@ -936,24 +959,26 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         trackYourTurn(state, dt)
         floorPad?.setLocal(position = Vec3(head.position.x, state.floorY - 0.003f, head.position.z))
 
-        // the code panel: lazy follow until the field is placed, fixed afterwards
-        val hold = panelPressed || (lastPanelPressMs != NEVER && now - lastPanelPressMs < PANEL_HOLD_MS) || state.menuOpen || state.blocked != null
-        val at = if (debugPanelNear) null else state.panelAt
-        if (at == null) {
-            if (hasHead && head.position.length > 1e-3f) codeFollower.follow(head, planeTracker.all, planeTracker.count, now, hold)
-            codePos = codeFollower.pose.position
-            codeRot = codeFollower.rotation
-        } else {
-            codePos = at.center
-            codeRot = PanelFacing(at.yaw, Math.toRadians(TurtleRules.PANEL_LEAN_DEG.toDouble()).toFloat()).rotation
+        // the code panel (taste D21): placed once in front of you, then fixed in the room; it moves only by its
+        // handle or when you ask for it ("bring it to me"). It never follows the head.
+        if (hasHead && head.position.length > 1e-3f && (panelPos == null || state.panelRecalls != panelRecallsSeen)) {
+            panelRecallsSeen = state.panelRecalls
+            recallPanel()
         }
-        if (hasHead && state.phase != Phase.BLOCKED) rig[PanelSpec.CODE]?.place(codePos, codeRot, PanelSpec.CODE_SCALE)
-        else rig[PanelSpec.CODE]?.hide()
+        panelPos?.let { codePos = it }
+        codeRot = PanelFacing(panelYaw, panelPitch).rotation
+        if (hasHead && state.phase != Phase.BLOCKED && panelPos != null) {
+            rig[PanelSpec.CODE]?.place(codePos, codeRot, PanelSpec.CODE_SCALE)
+            placeHandle()
+        } else {
+            rig[PanelSpec.CODE]?.hide()
+            handle?.enabled = false
+        }
 
         val sample = controller.sample()
         val stick = stickOf(sample, now)
+        // taste D1: once placed the field is locked; it moves again only through "move the field" (placing)
         if (state.phase == Phase.PLACING && hasHead) followRay(state, sample, stick, now, dt)
-        else if (state.field != null && state.phase in CANVAS_PHASES) moveCanvas(state, sample, stick, now, dt)
         lastTrigger = (sample?.pressed == true) || (sample?.trigger ?: 0f) > 0.6f
 
         if (state.phase == Phase.RUNNING) stepRun(state, now, dt)
@@ -984,27 +1009,90 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
 
     // ---------------------------------------------------------------- placing and moving the field
 
+    /**
+     * Placing (taste D1): nothing appears in front of the head; the ghost field shows up where the controller ray
+     * meets the floor (or the field is put down where you pinch the floor).
+     */
     private fun enterPlacing(state: TurtleUiState) {
-        val yaw = FloorPose.yawOf(head.forward, 0f)
-        placingYaw = yaw
+        yawOffset = 0f
         stickTurnDeg = 0f
         snapped = false
+        autoSized = false
         lastRotateRequests = TurtleGraph.rotate45Requests
-        val size = placeRule.largestFitting(frontCenter(state.fieldM, yaw, state.floorY), yaw, planeTracker.all, state.floorY, state.fieldM)
-        placingSize = size
-        placingCenter = frontCenter(size, yaw, state.floorY)
+        placingCenter = null
         placingTarget = null
-        livePose = FloorPose(placingCenter!!, yaw)
-        liveSize = size
-        TurtleLog.i("PLACE enter size=$size center=${TurtleLog.pos(placingCenter)} yaw=${deg(yaw)}")
-        if (size != state.fieldM) sink(TurtleEvent.FieldFollow(livePose!!, size, head.position.y, PlaceCheck.CLEAR, false))
+        livePose = null
+        liveSize = state.fieldM
+        TurtleLog.i("PLACE enter: waiting for the controller ray on the floor or a pinch on the floor")
     }
 
-    /** The field in front of the head: back edge 0.4 m ahead of the feet. */
-    private fun frontCenter(sizeM: Float, yaw: Float, floorY: Float): Vec3 {
-        val f = FloorPose(Vec3(head.position.x, floorY, head.position.z), yaw)
-        val c = f.toStage(0f, TurtleRules.FIELD_BACK_GAP_M + sizeM / 2f)
-        return Vec3(c.x, floorY, c.z)
+    // ---------------------------------------------------------------- the code panel (taste D21)
+
+    /**
+     * "Bring it to me" and the first appearance (taste D9 / D21): 1 m ahead of the head's level heading, 15 degrees
+     * below the eyes, facing the head, leaning back towards the eyes. Then it is fixed in the room.
+     */
+    private fun recallPanel() {
+        val flat = Vec3(head.forward.x, 0f, head.forward.z).let { if (it.length < 0.1f) Vec3.AHEAD else it.normalized() }
+        val drop = Math.tan(Math.toRadians(PANEL_BELOW_DEG.toDouble())).toFloat() * PANEL_DISTANCE_M
+        val at = head.position + flat * PANEL_DISTANCE_M - Vec3(0f, drop, 0f)
+        panelPos = at
+        facePanelToHead()
+        TurtleLog.i("PANEL recalled pos=${TurtleLog.pos(at)} yaw=${deg(panelYaw)} pitch=${deg(panelPitch)}")
+    }
+
+    /** Turns the panel (where it stands) to face the head: yaw about the vertical, pitch towards the eyes, no roll. */
+    private fun facePanelToHead() {
+        val at = panelPos ?: return
+        val to = head.position - at
+        panelYaw = atan2(to.x, to.z)
+        panelPitch = atan2(to.y, hypot(to.x, to.z)).coerceIn(0f, Math.toRadians(35.0).toFloat())
+    }
+
+    /** The drag handle: a 22 cm bar 4 cm under the panel's bottom edge, turned with it. */
+    private fun placeHandle() {
+        val h = handle ?: return
+        val (_, hh) = PanelSpec.halfM(PanelSpec.CODE, PanelSpec.CODE_SCALE)
+        val up = codeRot.rotate(Vec3.UP)
+        h.setLocal(position = codePos - up * (hh + HANDLE_GAP_M), rotation = codeRot, scale = Vec3(HANDLE_W_M, HANDLE_H_M, HANDLE_D_M))
+        h.enabled = true
+    }
+
+    /**
+     * A system drag (pinch and move, or the controller's trigger held on the handle) moves the panel with the
+     * hand. Far panels move further per centimetre of hand travel (gain = distance / 0.45 m, 1..6) so that a panel
+     * pushed 3 m away comes back in one reach. On release it turns to face you again (taste D21).
+     */
+    fun onSpatialDrag(phase: String, value: SpatialDragValue) {
+        val name = runCatching { value.targetEntity?.getName() }.getOrNull() ?: ""
+        when (phase) {
+            "start" -> {
+                val at = panelPos
+                panelDrag = if (name == HANDLE_NAME && at != null) PanelDrag(at, (at.distanceTo(head.position) / 0.45f).coerceIn(1f, 6f)) else null
+                if (panelDrag != null) TurtleLog.i("PANEL drag start gain=${TurtleLog.f(panelDrag!!.gain)}")
+            }
+            "move" -> {
+                val d = panelDrag ?: return
+                val a = value.dragAmount
+                d.totalPx = Vec3(d.totalPx.x + a.x, d.totalPx.y + a.y, d.totalPx.z + a.z)
+                val hand = handDelta(d.totalPx) ?: return
+                panelPos = d.start + hand * d.gain
+                facePanelToHead()
+            }
+            else -> {
+                val d = panelDrag ?: return
+                panelDrag = null
+                facePanelToHead()
+                TurtleLog.i("PANEL drag end pos=${TurtleLog.pos(panelPos)} moved=${TurtleLog.f(panelPos?.distanceTo(d.start) ?: 0f)}")
+            }
+        }
+    }
+
+    /** A hand movement in view pixels -> Stage metres (Spatial Ruler). */
+    private fun handDelta(px: Vec3): Vec3? {
+        val moved = toStage(px.x, px.y, px.z) ?: return null
+        val origin = toStage(0f, 0f, 0f) ?: return null
+        return moved - origin
     }
 
     /** Stick (x, y) after the dead zone; the debug stick wins while it lasts. */
@@ -1039,10 +1127,10 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
     }
 
     /**
-     * Placing (design `rules.placeField`, taste D1): the ghost field's centre follows the controller ray on the
-     * floor (0.1 s smoothing), starting right in front of you; its heading is fixed on entry and only the stick
-     * (90 degrees a second) and "turn 45" change it; near a wall it snaps to the suggested frame; the trigger on
-     * the floor places it. Frozen while tracking is lost.
+     * Placing (design `rules.placeField`, taste D1 / D10): the ghost field's centre follows the controller ray on
+     * the floor (0.1 s smoothing); its front faces you (the direction from the field to your head, level), turned
+     * further only by the stick (90 degrees a second) and "turn 45"; near a wall it snaps to the suggested frame;
+     * the trigger on the floor places it and the facing is locked from then on. Frozen while tracking is lost.
      */
     private fun followRay(state: TurtleUiState, sample: ControllerSample?, stick: Pair<Float, Float>, now: Long, dt: Float) {
         if (state.lost) return
@@ -1050,20 +1138,33 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         val half = size / 2f
         val hit = rayOnFloor(sample, state.floorY)
         if (hit != null) placingTarget = Vec3(hit.x, state.floorY, hit.z)
-        val target = placingTarget ?: placingCenter ?: frontCenter(size, placingYaw, state.floorY)
+        val target = placingTarget
+        if (target == null) {
+            // nothing is aimed at yet: no ghost (taste D1: never spawned in front of the head)
+            livePose = null
+            snapTape?.group?.setShown(false)
+            return
+        }
+        if (!autoSized) {
+            autoSized = true
+            val fit = placeRule.largestFitting(target, FloorPose.yawToward(target, head.position), planeTracker.all, state.floorY, state.fieldM)
+            if (fit != state.fieldM) sink(TurtleEvent.FieldFollow(FloorPose(target, FloorPose.yawToward(target, head.position)), fit, head.position.y, PlaceCheck.CLEAR, false))
+        }
         val c = placingCenter ?: target
         val k = (dt / 0.1f).coerceIn(0f, 1f)
         var center = c + (target - c) * k
-        // stick turns about the field's own vertical axis; "turn 45" clockwise
+        // stick turns about the field's own vertical axis; "turn 45" clockwise; both on top of facing you
         val turn = -stick.first * TurtleRules.STICK_DEG_S * dt
         if (turn != 0f) stickTurnDeg += abs(turn)
-        placingYaw += Math.toRadians(turn.toDouble()).toFloat()
+        yawOffset += Math.toRadians(turn.toDouble()).toFloat()
         val requests = TurtleGraph.rotate45Requests
         if (requests != lastRotateRequests) {
-            placingYaw -= Math.toRadians(45.0 * (requests - lastRotateRequests)).toFloat()
+            yawOffset -= Math.toRadians(45.0 * (requests - lastRotateRequests)).toFloat()
             lastRotateRequests = requests
             stickTurnDeg += 45f
         }
+        // taste D10: the front faces you (content -> user, level), locked when the field is put down
+        placingYaw = FloorPose.wrapRad(FloorPose.yawToward(center, head.position, placingYaw) + yawOffset)
         // taste D14: never under your feet; the back edge stays 0.2 m ahead of you
         val probe = FloorPose(center, placingYaw)
         val (fx, fy) = probe.toLocal(Vec3(head.position.x, state.floorY, head.position.z))
@@ -1115,57 +1216,6 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
 
     private fun check(pose: FloorPose, half: Float, state: TurtleUiState): PlaceCheck =
         if (state.hasFloor) placeRule.check(pose, half, planeTracker.all, state.floorY) else PlaceCheck.CLEAR
-
-    /**
-     * The placed field moves (design `rules.canvasMove`, taste B17 / D14): trigger held with the ray on the field
-     * drags it along the ray's floor point; the stick's x turns it about its centre (90 degrees a second), its y
-     * scales the field between 1 and 2 m (the routes scale with it, the turtle does not). The code panel stays.
-     */
-    private fun moveCanvas(state: TurtleUiState, sample: ControllerSample?, stick: Pair<Float, Float>, now: Long, dt: Float) {
-        var pose = livePose ?: state.field ?: return
-        var size = liveSize
-        val trigger = (sample?.pressed == true) || (sample?.trigger ?: 0f) > 0.6f
-        val hit = rayOnFloor(sample, state.floorY)
-        var active = false
-        if (trigger && !lastTrigger && hit != null) {
-            val (x, y) = pose.toLocal(hit)
-            if (abs(x) <= size / 2f + 0.2f && abs(y) <= size / 2f + 0.2f) {
-                dragOffset = pose.center - hit
-                TurtleLog.i("CANVAS drag start at=${TurtleLog.pos(hit)}")
-            }
-        }
-        if (!trigger) dragOffset = null
-        val off = dragOffset
-        if (off != null && hit != null) {
-            val c = hit + off
-            pose = pose.copy(center = Vec3(c.x, state.floorY, c.z))
-            active = true
-        } else if (off != null) {
-            active = true
-        }
-        if (stick.first != 0f) {
-            pose = pose.copy(yaw = pose.yaw - Math.toRadians((stick.first * TurtleRules.STICK_DEG_S * dt).toDouble()).toFloat())
-            active = true
-        }
-        if (stick.second != 0f) {
-            size = (size + stick.second * TurtleRules.STICK_SCALE_M_S * dt).coerceIn(TurtleRules.FIELD_MIN_M, TurtleRules.FIELD_MAX_M)
-            active = true
-        }
-        if (active) {
-            livePose = pose
-            liveSize = size
-            if (!moving) TurtleLog.i("CANVAS move start")
-            moving = true
-            if (now - lastMovedSentMs >= PLACING_EMIT_MS) {
-                lastMovedSentMs = now
-                sink(TurtleEvent.FieldMoved(pose, size, true))
-            }
-        } else if (moving) {
-            moving = false
-            TurtleLog.i("CANVAS move end center=${TurtleLog.pos(pose.center)} size=${TurtleLog.f(size)}")
-            sink(TurtleEvent.FieldMoved(pose, size, false))
-        }
-    }
 
     // ---------------------------------------------------------------- the run
 
@@ -1835,8 +1885,8 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         planeTracker.all.map { p -> "PLANE ${p.label} kind=${p.kind} center=${TurtleLog.pos(p.centroid)} normal=${TurtleLog.pos(p.normal)} verts=${p.vertices.size}" }
 
     override fun parkPanel(): String {
-        codeFollower.park(head, planeTracker.all, SystemClock.elapsedRealtime())
-        return "FOLLOW code park requested"
+        recallPanel()
+        return "PANEL recalled (park)"
     }
 
     override fun setFpsLine(on: Boolean): String {
@@ -1885,8 +1935,15 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
 
     override fun panelNear(on: Boolean): String {
         debugPanelNear = on
-        if (on) codeFollower.park(head, planeTracker.all, SystemClock.elapsedRealtime())
-        return "PANEL near=$on"
+        if (on) recallPanel()
+        return "PANEL near=$on (recalled in front of the head)"
+    }
+
+    override fun dragPanel(dx: Float, dy: Float, dz: Float): String {
+        val at = panelPos ?: return "PANEL not placed"
+        panelPos = at + Vec3(dx, dy, dz)
+        facePanelToHead()
+        return "PANEL moved to ${TurtleLog.pos(panelPos)} distance=${TurtleLog.f(panelPos!!.distanceTo(head.position))}"
     }
 
     override fun snap(): String {
@@ -1911,9 +1968,14 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         private const val SNACK_GAP_M = 0.04f
         private const val COACH_GAP_M = 0.03f
         private const val TAG_LIFT_M = 0.15f
-        private val CANVAS_PHASES = setOf(Phase.CODING, Phase.RUNNING, Phase.DRAWN, Phase.TURN_ALONG, Phase.TURN_DONE, Phase.LESSONS)
+        private const val HANDLE_NAME = "panelHandle"
+        private const val HANDLE_GAP_M = 0.04f
+        private const val HANDLE_W_M = 0.22f
+        private const val HANDLE_H_M = 0.024f
+        private const val HANDLE_D_M = 0.024f
 
-        /** Half sizes of the code panel (0.787 x 0.538 m) with a little air, for the surface rule. */
-        private val CODE_HALF_EXTENTS = listOf(0.41f, 0.28f, 0.01f)
+        /** Taste D21 / D10: the panel 1 m ahead, 15 degrees below the eyes. */
+        private const val PANEL_DISTANCE_M = 1.0f
+        private const val PANEL_BELOW_DEG = 15f
     }
 }

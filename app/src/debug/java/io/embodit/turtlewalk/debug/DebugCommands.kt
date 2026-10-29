@@ -81,6 +81,11 @@ internal object DebugCommands {
                 TurtleLog.i(scene?.canvas(kind, nums.getOrElse(0) { 0f }, nums.getOrElse(1) { 0f }) ?: NO_SCENE)
             }
             "panel_near" -> TurtleLog.i(scene?.panelNear(word != "off") ?: NO_SCENE)
+            "panel_move" -> {
+                val v = text.split(',', ' ').mapNotNull { it.trim().toFloatOrNull() }
+                TurtleLog.i(scene?.dragPanel(v.getOrElse(0) { 0f }, v.getOrElse(1) { 0f }, v.getOrElse(2) { 0f }) ?: NO_SCENE)
+            }
+            "recall" -> host.dispatch(TurtleEvent.RecallPanelClicked)
             "snap" -> TurtleLog.i(scene?.snap() ?: NO_SCENE)
             "nofloor" -> host.dispatch(TurtleEvent.DebugNoFloor)
             "lost" -> host.dispatch(TurtleEvent.DebugTracking(true))

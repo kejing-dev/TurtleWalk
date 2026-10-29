@@ -9,6 +9,24 @@ single_panel_with_popup, direction A with B's opening: lessons 1–2 "walk to th
 `../spatial-app-factory/apps/turtle-walk/sample.html`. Built from `../dance-steps` (same skeleton as the design's
 reference `../spatial-ruler`: plane / head trackers, controller input, pooled attachment panels, lazy follow).
 
+## v0.1.2 (2026-10-28, headset feedback: facing reversed, UI stuck far away, ugly upside-down turtle)
+
+- **Facing (taste D10)**: the field's front (+y), the turtle at heading 0, the chevron and the target arrows face you:
+  `FloorPose.yawToward(content, user)` (level), computed while the ghost follows the ray and locked when it is put down.
+  `PlaceFacingTest` places from east / south / west / north (< 10°, proper rotations only).
+- **Placing (taste D1)**: nothing appears in front of the head. The ghost field appears where the controller ray meets the
+  floor; trigger or "place here" puts it down; a pinch on the floor puts it there directly. Once placed it is locked;
+  More → "move the field" re-enters placing. The old "bring the field to me" (head based) and the free drag are gone.
+- **Code panel (taste D21)**: fixed in the room. First shown 1 m ahead of the head, 15° below the eyes, facing you;
+  a white handle 4 cm under its bottom edge drags it (system drag: pinch, or the controller trigger), with a gain that grows
+  with distance (1..6) so a far panel comes back in one reach; on release it faces you again. "Bring here" on every title bar
+  and in More puts it back in front of you. It no longer moves when the field is placed.
+- **Turtle (taste B12)**: a CC BY 4.0 pond turtle scan, see `ASSETS.md`; `tools/turtle_model.py` inspects, renders and exports
+  it (Y-up, head −Z, feet y = 0). Walking = the body moving with a waddle; turning = turning on the spot with a rock. The
+  shape-made turtle stays only as the fallback if the model cannot load (log `MODEL turtle loaded=false`).
+- Debug: `recall` (as "bring here"), `panel_move dx,dy,dz` (as a drag, Stage metres), `panel_near` = recall.
+- Head-pose gate: `../spatial-app-factory/apps/turtle-walk/build/headpose-audit.md`.
+
 ## Structure
 
 ```
@@ -20,12 +38,14 @@ app/src/main/java/io/embodit/turtlewalk/
   data             TurtleRepository (prefs JSON: language, field size, coach seen, per lesson drawn/turned/walked/program)
   platform         HeadTracker, PlaneTracker, ControllerInput (ray, trigger, stick x/y)
   ui/turtle        TurtleViewModel (state machine), TurtleUiState / TurtleEvent, TurtleScreen
-  ui/turtle/scene  TurtleScene (ECS frame system: placing, canvas move, run timeline, turn along, walk),
-                   FieldViews (tape, bars, turtle, ring, wedges, arrows), PanelRig / PanelSpec / Follower, SceneKit
+  ui/turtle/scene  TurtleScene (ECS frame system: placing, the fixed code panel and its handle, run timeline, turn along,
+                   walk), FieldViews (tape, bars, turtle model, ring, wedges, arrows), PanelRig / PanelSpec, SceneKit
   ui/turtle/components  CodePanel (lessons, placing, 3 columns + value bar), MoreMenu, Overlays (dialog, snackbar,
                    coach, degree tags), Common (Glass, Key, WordButton, Segments, Chip, type roles)
 app/src/debug/    DebugCommandReceiver + DebugCommands (QA hooks)
-app/src/test/     CheckUseCaseTest (13: every lesson matches, open/spin/mirror/tooMany/different/outOfField, editing)
+app/src/test/     CheckUseCaseTest (13: every lesson matches, open/spin/mirror/tooMany/different/outOfField, editing),
+                  PlaceFacingTest (3: the four-direction placement gate)
+tools/turtle_model.py  turtle GLB inspect / render / export (see ASSETS.md)
 ```
 
 Field coordinates are steps: origin = field centre, +x right, +y = front (towards the code panel); one step =

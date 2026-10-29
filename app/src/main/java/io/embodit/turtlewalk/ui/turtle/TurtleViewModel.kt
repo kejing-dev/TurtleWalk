@@ -158,6 +158,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
             is TurtleEvent.FieldFollow -> {
                 latestPlacing = event.pose
                 latestHead = latestHead?.let { Vec3(it.x, event.headY, it.z) }
+                if (s.phase == Phase.PLACING && !s.ghost) update { it.copy(ghost = true) }
                 if (!debugHold && s.phase == Phase.PLACING && (event.check != s.placeCheck || event.snapped != s.snapped || event.sizeM != s.fieldM)) {
                     if (event.snapped && !s.snapped) snack(SnackKind.SNAPPED, 800L)
                     update { it.copy(placeCheck = event.check, snapped = event.snapped, fieldM = event.sizeM) }
@@ -206,8 +207,10 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
             is TurtleEvent.WalkAtEnd -> if (s.phase == Phase.WALKING && s.walk?.serial == event.serial && event.closedWithTurn) update { it.copy(phase = Phase.TURN_HOME, offPath = false) }
             is TurtleEvent.WalkFinished -> if ((s.phase == Phase.WALKING || s.phase == Phase.TURN_HOME) && s.walk?.serial == event.serial) finishWalk(event)
             is TurtleEvent.FloorPinched -> if (s.phase == Phase.PLACING) {
-                val yaw = latestPlacing?.yaw ?: latestHeadYaw
-                latestPlacing = FloorPose(Vec3(event.at.x, s.floorY, event.at.z), yaw)
+                // taste D1 / D10: put down where you pinched, its front facing you
+                val at = Vec3(event.at.x, s.floorY, event.at.z)
+                latestPlacing = FloorPose(at, latestHead?.let { h -> FloorPose.yawToward(at, h, latestHeadYaw) } ?: latestHeadYaw)
+                update { it.copy(ghost = true) }
                 TurtleLog.i("FIELD pinched at=${TurtleLog.pos(event.at)}")
                 placeHere()
             }
@@ -226,10 +229,13 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
                 update { it.copy(language = event.language) }
                 saveSettings { it.copy(language = event.language) }
             }
-            TurtleEvent.BringFieldClicked -> bringField()
+            TurtleEvent.RecallPanelClicked -> {
+                TurtleLog.i("PANEL recall requested")
+                update { it.copy(panelRecalls = it.panelRecalls + 1, menuOpen = false) }
+            }
             TurtleEvent.ReplaceFieldClicked -> {
                 if (s.phase in setOf(Phase.LESSONS, Phase.CODING, Phase.DRAWN, Phase.WALK_DONE, Phase.TURN_DONE)) {
-                    update { it.copy(menuOpen = false, field = null, panelAt = null, phase = Phase.PLACING, run = null, result = null, turn = null, walk = null, inkShown = false, selected = null) }
+                    update { it.copy(menuOpen = false, field = null, ghost = false, phase = Phase.PLACING, run = null, result = null, turn = null, walk = null, inkShown = false, selected = null) }
                 }
             }
             TurtleEvent.LessonListClicked -> toLessons()
@@ -428,36 +434,21 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
         TurtleLog.i("FIELD placed center=${TurtleLog.pos(pose.center)} yaw=${deg(pose.yaw)} size=${TurtleLog.f(s.fieldM)} headY=${TurtleLog.f(headY)}")
         update {
             val coach = if (1 !in it.settings.coachSeen) 1 else if (2 !in it.settings.coachSeen) 2 else null
-            it.copy(field = pose, headYAtPlace = headY, panelAt = panelFor(pose, it.fieldM, headY, it.floorY), phase = Phase.CODING, coach = coach, snapped = false)
+            // the code panel stays where you put it (taste D21); only the field is placed
+            it.copy(field = pose, headYAtPlace = headY, phase = Phase.CODING, coach = coach, snapped = false, ghost = false)
         }
         saveSettings { it.copy(fieldM = s.fieldM) }
     }
 
-    /** The code panel: outside the front edge, at head height - 0.55 m (at least 0.75 m above the floor), facing back. */
-    private fun panelFor(field: FloorPose, sizeM: Float, headY: Float, floorY: Float): FloorPose {
-        val at = field.toStage(0f, sizeM / 2f + TurtleRules.PANEL_OUTSIDE_FRONT_M)
-        val y = max(headY - TurtleRules.PANEL_BELOW_HEAD_M, floorY + TurtleRules.PANEL_MIN_HEIGHT_M)
-        return FloorPose(Vec3(at.x, y, at.z), field.yaw)
-    }
-
-    /** "Bring the field to me" (taste D9): the field in front of the head as now, the code panel placed again. */
-    private fun bringField() {
-        val s = _state.value
-        val head = latestHead ?: return
-        if (s.field == null) {
-            update { it.copy(menuOpen = false) }
-            return
-        }
-        val pose = frontOf(head, latestHeadYaw, s.fieldM, s.floorY)
-        TurtleLog.i("FIELD brought center=${TurtleLog.pos(pose.center)} yaw=${deg(pose.yaw)}")
-        update { it.copy(field = pose, panelAt = panelFor(pose, it.fieldM, head.y, it.floorY), headYAtPlace = head.y, menuOpen = false) }
-    }
-
-    /** The field right in front: its back edge 0.4 m ahead of the feet, its front along the heading. */
-    private fun frontOf(head: Vec3, yaw: Float, sizeM: Float, floorY: Float): FloorPose {
+    /**
+     * Debug only (`place`, `state ...`): a field 0.4 m ahead of the feet, its front facing the head (taste D10).
+     * Product placement never uses the head direction: the ghost follows the controller ray or a pinch (taste D1).
+     */
+    private fun debugFrontOf(head: Vec3, yaw: Float, sizeM: Float, floorY: Float): FloorPose {
         val f = FloorPose(Vec3(head.x, floorY, head.z), yaw)
         val c = f.toStage(0f, TurtleRules.FIELD_BACK_GAP_M + sizeM / 2f)
-        return FloorPose(Vec3(c.x, floorY, c.z), yaw)
+        val center = Vec3(c.x, floorY, c.z)
+        return FloorPose(center, FloorPose.yawToward(center, head, yaw))
     }
 
     // =========================================================================================
@@ -697,8 +688,8 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
     private fun debugPlace(sizeM: Float?) {
         val head = latestHead ?: Vec3(0f, 1.6f, 0f)
         val size = sizeM ?: _state.value.fieldM
-        val pose = frontOf(head, latestHeadYaw, size, _state.value.floorY)
-        update { it.copy(field = pose, fieldM = size, headYAtPlace = head.y, panelAt = panelFor(pose, size, head.y, it.floorY), phase = if (it.phase == Phase.PLACING || it.phase == Phase.LESSONS) Phase.CODING else it.phase) }
+        val pose = debugFrontOf(head, latestHeadYaw, size, _state.value.floorY)
+        update { it.copy(field = pose, fieldM = size, headYAtPlace = head.y, phase = if (it.phase == Phase.PLACING || it.phase == Phase.LESSONS) Phase.CODING else it.phase) }
         TurtleLog.i("FIELD placed by debug center=${TurtleLog.pos(pose.center)} size=${TurtleLog.f(size)}")
     }
 
@@ -750,7 +741,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
         when (base) {
             "starting" -> update { it.copy(phase = Phase.STARTING) }
             "lessons" -> toLessons()
-            "placing" -> update { it.copy(phase = Phase.PLACING, field = null, panelAt = null, run = null, result = null, turn = null, walk = null, inkShown = false) }
+            "placing" -> update { it.copy(phase = Phase.PLACING, field = null, ghost = false, run = null, result = null, turn = null, walk = null, inkShown = false) }
             "coding" -> update { it.copy(phase = Phase.CODING, run = null, result = null, turn = null, walk = null) }
             "running" -> {
                 update { it.copy(phase = Phase.CODING, run = null, turn = null, walk = null) }

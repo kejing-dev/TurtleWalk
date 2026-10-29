@@ -140,6 +140,9 @@ internal class SceneMaterials(private val shared: SharedResources) {
     val skin: Material = unlit(TurtleColors.TurtleSkin, twoSided = true)
     val nose: Material = unlit(TurtleColors.Interaction, twoSided = true)
 
+    /** The code panel's drag handle (taste D21). */
+    val handle: Material = sheer(TurtleColors.Tape, 0.8f)
+
     /** You: dot, ring, trail; arrows in interaction yellow, your heading in thin white. */
     val you: Material = unlit(TurtleColors.You, twoSided = true)
     val youRing: Material = unlit(TurtleColors.Interaction, twoSided = true)

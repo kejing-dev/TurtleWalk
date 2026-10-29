@@ -92,6 +92,18 @@ private fun Starting() {
 @Composable
 private fun MoreKey(onEvent: (TurtleEvent) -> Unit) = Key("more", R.drawable.ic_more, rs(R.string.more)) { onEvent(TurtleEvent.MoreClicked) }
 
+/** Taste D21: "bring it to me" on every title bar (icon + word, taste B19); the panel lands 1 m ahead, 15 degrees low. */
+@Composable
+private fun RecallKey(onEvent: (TurtleEvent) -> Unit) = WordButton("recall", rs(R.string.action_recall), { onEvent(TurtleEvent.RecallPanelClicked) }, iconRes = R.drawable.ic_recall, minWidth = 120.dp)
+
+@Composable
+private fun TrailingKeys(onEvent: (TurtleEvent) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        RecallKey(onEvent)
+        MoreKey(onEvent)
+    }
+}
+
 @Composable
 private fun BackKey(onEvent: (TurtleEvent) -> Unit) = Key("back", R.drawable.ic_back, rs(R.string.back)) { onEvent(TurtleEvent.BackClicked) }
 
@@ -106,7 +118,7 @@ private fun zh(): Boolean = LocalTurtleResources.current.configuration.locales[0
 
 @Composable
 private fun ColumnScope.LessonsLayout(state: TurtleUiState, onEvent: (TurtleEvent) -> Unit) {
-    TitleRow(rs(R.string.lessons_title), trailing = { MoreKey(onEvent) })
+    TitleRow(rs(R.string.lessons_title), trailing = { TrailingKeys(onEvent) })
     val zh = zh()
     Column(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         for (row in 0 until 2) {
@@ -119,7 +131,11 @@ private fun ColumnScope.LessonsLayout(state: TurtleUiState, onEvent: (TurtleEven
         }
     }
     val line = if (state.field != null) rs(R.string.lessons_field, stepText(state.fieldM), stepText(state.stepM)) else rs(R.string.lessons_no_field)
-    Text(text = line, color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.body, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text = line, color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.body, maxLines = 1, modifier = Modifier.weight(1f))
+        // CC BY 4.0 attribution of the turtle model (ASSETS.md)
+        Text(text = rs(R.string.credit_turtle), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1)
+    }
 }
 
 @Composable
@@ -192,10 +208,11 @@ internal fun LessonThumb(lesson: Lesson, modifier: Modifier) {
 
 @Composable
 private fun ColumnScope.PlacingLayout(state: TurtleUiState, onEvent: (TurtleEvent) -> Unit) {
-    TitleRow(rs(R.string.placing_title), leading = { BackKey(onEvent) })
+    TitleRow(rs(R.string.placing_title), leading = { BackKey(onEvent) }, trailing = { RecallKey(onEvent) })
     Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(text = rs(R.string.placing_body), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.body, maxLines = 4)
+            Text(text = rs(R.string.placing_body), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.body, maxLines = 5)
+            if (!state.ghost) Chip(rs(R.string.placing_aim), R.drawable.ic_stick, TurtleColors.InfoChipBg, TurtleColors.InfoChipText, Modifier.fillMaxWidth(), maxLines = 3)
             FieldPicture(Modifier.size(200.dp, 150.dp))
         }
         Column(modifier = Modifier.width(380.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -301,7 +318,7 @@ private fun ColumnScope.CodeLayout(state: TurtleUiState, onEvent: (TurtleEvent) 
     val backable = state.phase in setOf(Phase.CODING, Phase.DRAWN, Phase.TURN_DONE, Phase.WALK_READY, Phase.WALK_DONE)
     val goal = goalText(lesson.n)
     val leading: (@Composable () -> Unit)? = if (backable) { { BackKey(onEvent) } } else null
-    TitleRow(rs(R.string.lesson_title, lesson.n, lesson.name(zh)), sub = goal, leading = leading, trailing = { MoreKey(onEvent) })
+    TitleRow(rs(R.string.lesson_title, lesson.n, lesson.name(zh)), sub = goal, leading = leading, trailing = { TrailingKeys(onEvent) })
     val editing = state.phase == Phase.CODING || state.phase == Phase.DRAWN
     val showValueBar = editing && state.selected != null
     val wide = state.phase == Phase.CODING

@@ -12,6 +12,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.pico.spatial.ui.foundation.gesture.TargetEntity
+import com.pico.spatial.ui.foundation.gesture.detectSpatialDragGesture
 import com.pico.spatial.ui.foundation.gesture.detectSpatialTapGesture
 import io.embodit.turtlewalk.ui.turtle.TurtleEvent
 import io.embodit.turtlewalk.ui.turtle.TurtleUiState
@@ -38,6 +39,16 @@ internal fun TurtleStage(state: TurtleUiState, scene: TurtleScene, onEvent: (Tur
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectSpatialTapGesture(context = context, targetedToEntity = TargetEntity.any()) { value -> scene.onSpatialTap(value) }
+                }
+                // taste D21: the code panel's handle is dragged with a pinch or the controller's trigger
+                .pointerInput(Unit) {
+                    detectSpatialDragGesture(
+                        context = context,
+                        targetedToEntity = TargetEntity.any(),
+                        onDragStart = { _, value -> scene.onSpatialDrag("start", value) },
+                        onDragEnd = { value -> scene.onSpatialDrag("end", value) },
+                        onDragCancel = { value -> scene.onSpatialDrag("cancel", value) },
+                    ) { value -> scene.onSpatialDrag("move", value) }
                 },
         attachments = {
             AttachmentPanel(PanelSpec.CODE) {

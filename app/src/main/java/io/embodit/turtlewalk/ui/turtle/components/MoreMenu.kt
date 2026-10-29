@@ -22,8 +22,9 @@ import io.embodit.turtlewalk.ui.turtle.scene.PanelSpec
 
 /**
  * The More menu (design `panels.moreMenu`, a pre-built attachment panel under the More key): language segment
- * (acts in place), "bring the field to me" (taste D9), the floor height keys (only on the estimated floor,
- * taste D7), lessons, place the field again, exit.
+ * (acts in place), "bring the panel to me" (taste D21), the floor height keys (only on the estimated floor,
+ * taste D7), lessons, "move the field" (taste D1: the field is locked once placed; this puts the ghost back on
+ * the controller ray), exit.
  */
 @Composable
 internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEvent) -> Unit) {
@@ -41,7 +42,7 @@ internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEve
                 iconDescription = rs(R.string.lang_system),
             )
         }
-        WordButton("menu_bring", rs(R.string.menu_bring), { onEvent(TurtleEvent.BringFieldClicked) }, modifier = Modifier.fillMaxWidth(), enabled = state.field != null && state.phase != Phase.WALKING, iconRes = R.drawable.ic_floor)
+        WordButton("menu_recall", rs(R.string.menu_bring), { onEvent(TurtleEvent.RecallPanelClicked) }, modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.ic_recall)
         if (state.estFloor) {
             Row(modifier = Modifier.fillMaxWidth().height(KeyHeight), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -58,7 +59,7 @@ internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEve
         }
         WordButton("menu_lessons", rs(R.string.menu_lessons), { onEvent(TurtleEvent.LessonListClicked) }, modifier = Modifier.fillMaxWidth(), enabled = state.phase != Phase.LESSONS, iconRes = R.drawable.ic_back)
         val canReplace = state.phase in setOf(Phase.LESSONS, Phase.CODING, Phase.DRAWN, Phase.WALK_DONE, Phase.TURN_DONE)
-        WordButton("menu_replace", rs(R.string.menu_replace), { onEvent(TurtleEvent.ReplaceFieldClicked) }, modifier = Modifier.fillMaxWidth(), enabled = canReplace, iconRes = R.drawable.ic_rotate45)
+        WordButton("menu_replace", rs(R.string.menu_replace), { onEvent(TurtleEvent.ReplaceFieldClicked) }, modifier = Modifier.fillMaxWidth(), enabled = canReplace, iconRes = R.drawable.ic_floor)
         WordButton("menu_exit", rs(R.string.menu_exit), { onEvent(TurtleEvent.ExitClicked) }, modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.ic_exit)
     }
 }

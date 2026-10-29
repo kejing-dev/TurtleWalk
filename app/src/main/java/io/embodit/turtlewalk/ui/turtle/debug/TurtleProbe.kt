@@ -79,6 +79,9 @@ object TurtleProbe {
 
         /** Debug: the code panel lazily follows the head again (1 m ahead) so screenshots can read it. */
         fun panelNear(on: Boolean): String
+
+        /** Debug: moves the code panel by (dx, dy, dz) Stage metres, as a drag would; it turns to the head again. */
+        fun dragPanel(dx: Float, dy: Float, dz: Float): String
     }
 
     @Volatile var host: Host? = null
