@@ -12,7 +12,7 @@ object PanelSpec {
 
     /** Width / height in dp. The code panel is 820 x 560 at scale 1.2 (1 dp = 0.96 mm: 0.787 x 0.538 m). */
     val CODE_SIZE = 820f to 560f
-    val MENU_SIZE = 280f to 360f
+    val MENU_SIZE = 280f to 488f
     val SNACK_SIZE = 600f to 72f
     val DIALOG_SIZE = 480f to 240f
     val COACH_SIZE = 400f to 136f

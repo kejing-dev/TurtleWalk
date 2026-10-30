@@ -17,6 +17,8 @@ import java.util.Locale
  *                                phase[+overlay...][:mode][@Ln] (design `stateNaming`), e.g. `coding+blockSelected@L4`,
  *                                `drawn:mirror@L3`, `drawn+outOfField@L3`, `turnAlong@L3`, `turnDone:guess@L5`, `placing+estFloor`
  * - `lesson <n>`                 opens lesson n (as tapping its card)
+ * - `free [round] [seed]`        opens free mode (taste B21) at a round with a seed; `state <x>@F<n>` uses the QA seed of round n
+ * - `exit_confirm`               as Settings -> "exit app" (the dialog; `ui dialog_exit` confirms); `reset_progress`
  * - `place [2|1.5|1]`            places the field in front of you now
  * - `program <text>`             sets the program: `F1 R90`, `R4[F1 R90]` (R<n>[...] or X<n>[...] = repeat)
  * - `solve`                      the lesson's reference answer as the program
@@ -58,6 +60,12 @@ internal object DebugCommands {
         when (name) {
             "state" -> host.dispatch(TurtleEvent.DebugState(text))
             "lesson" -> text.toIntOrNull()?.let { host.dispatch(TurtleEvent.LessonClicked(it)) }
+            "free" -> {
+                val parts = text.split(Regex("[\\s,]+")).filter { it.isNotEmpty() }
+                host.dispatch(TurtleEvent.DebugFree(parts.getOrNull(0)?.toIntOrNull(), parts.getOrNull(1)?.toLongOrNull()))
+            }
+            "exit_confirm" -> host.dispatch(TurtleEvent.ExitClicked)
+            "reset_progress" -> host.dispatch(TurtleEvent.ResetProgressClicked)
             "place" -> host.dispatch(TurtleEvent.DebugPlace(text.toFloatOrNull()))
             "program" -> host.dispatch(TurtleEvent.DebugProgram(text))
             "solve" -> host.dispatch(TurtleEvent.DebugSolve)

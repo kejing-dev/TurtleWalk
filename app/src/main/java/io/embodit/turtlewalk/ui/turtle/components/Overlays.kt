@@ -49,17 +49,19 @@ import kotlin.math.abs
 private const val FADE_IN_MS = 150
 
 /**
- * "Spatial features unavailable" (design `panels.blockedDialog`): a self-built attachment panel
- * (480 x 240 dp at 1.125, 0.9 m ahead) with icon, title, one sentence, exit and retry. In a Stage the
- * SpatialUI `AlertDialog` composes nothing (Spatial Ruler finding).
+ * The app's one dialog panel (480 x 240 dp at 1.125, 0.9 m ahead), a self-built attachment panel (in a Stage the
+ * SpatialUI `AlertDialog` composes nothing: Spatial Ruler finding). Two uses:
+ * - "Spatial features unavailable" (design `panels.blockedDialog`): icon, title, one sentence, exit and retry;
+ * - "Exit Turtle Walk?" (taste D26): the second step of Settings -> "exit app", cancel or exit.
  */
 @Composable
-internal fun BlockedDialog(reason: BlockReason?, onEvent: (TurtleEvent) -> Unit) {
+internal fun AppDialog(reason: BlockReason?, exitConfirm: Boolean, onEvent: (TurtleEvent) -> Unit) {
     val (w, h) = PanelSpec.DIALOG_SIZE
     Box(modifier = Modifier.size(w.dp, h.dp), contentAlignment = Alignment.Center) {
-        if (reason == null) return@Box
-        val fade = remember(reason) { Animatable(0f) }
-        LaunchedEffect(reason) { fade.animateTo(1f, tween(FADE_IN_MS)) }
+        if (reason == null && !exitConfirm) return@Box
+        val key = reason?.name ?: "exit"
+        val fade = remember(key) { Animatable(0f) }
+        LaunchedEffect(key) { fade.animateTo(1f, tween(FADE_IN_MS)) }
         val ink = PicoTheme.colorScheme.labelPrimary
         Column(
             modifier =
@@ -72,16 +74,25 @@ internal fun BlockedDialog(reason: BlockReason?, onEvent: (TurtleEvent) -> Unit)
                     .padding(32.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Icon(painter = painterResource(R.drawable.ic_unavailable), contentDescription = null, modifier = Modifier.size(32.dp), tint = PicoTheme.colorScheme.error)
+                if (reason != null) {
+                    Icon(painter = painterResource(R.drawable.ic_unavailable), contentDescription = null, modifier = Modifier.size(32.dp), tint = PicoTheme.colorScheme.error)
+                } else {
+                    Icon(painter = painterResource(R.drawable.ic_exit), contentDescription = null, modifier = Modifier.size(32.dp), tint = ink)
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(text = rs(R.string.blocked_title), color = ink, style = TurtleType.headline, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(text = rs(R.string.blocked_body), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.body, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text(text = rs(if (reason != null) R.string.blocked_title else R.string.exit_title), color = ink, style = TurtleType.headline, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(text = rs(if (reason != null) R.string.blocked_body else R.string.exit_body), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.body, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
             Row(modifier = Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                WordButton("dialog_exit", rs(R.string.action_exit), { onEvent(TurtleEvent.ExitClicked) }, minWidth = 120.dp, iconRes = R.drawable.ic_exit)
-                WordButton("dialog_retry", rs(R.string.action_retry), { onEvent(TurtleEvent.RetryClicked) }, primary = true, minWidth = 120.dp, iconRes = R.drawable.ic_retry)
+                if (reason != null) {
+                    WordButton("dialog_exit", rs(R.string.action_exit), { onEvent(TurtleEvent.ExitConfirmed) }, minWidth = 120.dp, iconRes = R.drawable.ic_exit)
+                    WordButton("dialog_retry", rs(R.string.action_retry), { onEvent(TurtleEvent.RetryClicked) }, primary = true, minWidth = 120.dp, iconRes = R.drawable.ic_retry)
+                } else {
+                    WordButton("dialog_cancel", rs(R.string.action_cancel), { onEvent(TurtleEvent.ExitCancelled) }, primary = true, minWidth = 120.dp, iconRes = R.drawable.ic_close)
+                    WordButton("dialog_exit", rs(R.string.action_exit), { onEvent(TurtleEvent.ExitConfirmed) }, minWidth = 120.dp, iconRes = R.drawable.ic_exit)
+                }
             }
         }
     }
@@ -101,6 +112,7 @@ private fun snackText(snack: Snack): String =
         SnackKind.TOO_LONG -> rs(R.string.snack_too_long, snack.number)
         SnackKind.LIMIT_BLOCKS -> rs(R.string.snack_limit_blocks)
         SnackKind.LIMIT_NESTING -> rs(R.string.snack_limit_nesting)
+        SnackKind.RESET -> rs(R.string.snack_reset)
     }
 
 /** Warnings speak on the dark warm chip, everything else on the dark info chip (design `panels.snackbar`, taste D13). */

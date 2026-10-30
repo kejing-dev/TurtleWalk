@@ -50,6 +50,10 @@ object SettingsJson {
         root.put("fieldM", s.fieldM.toDouble())
         root.put("lastLesson", s.lastLesson)
         root.put("coachSeen", JSONArray().apply { s.coachSeen.sorted().forEach { put(it) } })
+        root.put("freeRound", s.freeRound)
+        root.put("freeSeed", s.freeSeed)
+        root.put("freeDone", s.freeDone)
+        root.put("freeLast", s.freeLast)
         root.put(
             "lessons",
             JSONObject().apply {
@@ -94,6 +98,10 @@ object SettingsJson {
             lastLesson = root.optInt("lastLesson", 1).coerceIn(1, 10),
             coachSeen = seen,
             records = records,
+            freeRound = root.optInt("freeRound", 1).coerceAtLeast(1),
+            freeSeed = root.optLong("freeSeed", 0L),
+            freeDone = root.optInt("freeDone", 0).coerceAtLeast(0),
+            freeLast = root.optString("freeLast", ""),
         )
     }
 }

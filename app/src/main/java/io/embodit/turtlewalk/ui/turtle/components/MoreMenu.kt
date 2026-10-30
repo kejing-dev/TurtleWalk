@@ -2,12 +2,15 @@ package io.embodit.turtlewalk.ui.turtle.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pico.spatial.ui.design.PicoTheme
@@ -21,10 +24,11 @@ import io.embodit.turtlewalk.ui.turtle.TurtleUiState
 import io.embodit.turtlewalk.ui.turtle.scene.PanelSpec
 
 /**
- * The More menu (design `panels.moreMenu`, a pre-built attachment panel under the More key): language segment
- * (acts in place), "bring the panel to me" (taste D21), the floor height keys (only on the estimated floor,
- * taste D7), lessons, "move the field" (taste D1: the field is locked once placed; this puts the ghost back on
- * the controller ray), exit.
+ * The More menu = the app's settings (design `panels.moreMenu`, taste D26; a pre-built attachment panel under the
+ * More key): language segment (acts in place), "bring the panel to me" (taste D21), the floor height keys (only on
+ * the estimated floor, taste D7), lessons, "move the field" (taste D1: the field is locked once placed; this puts
+ * the ghost back on the controller ray), reset progress, about (version), and at the very bottom "exit app", which
+ * asks first. No volume / mute: the app makes no sound.
  */
 @Composable
 internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEvent) -> Unit) {
@@ -60,7 +64,19 @@ internal fun MoreMenu(state: TurtleUiState, filled: Boolean, onEvent: (TurtleEve
         WordButton("menu_lessons", rs(R.string.menu_lessons), { onEvent(TurtleEvent.LessonListClicked) }, modifier = Modifier.fillMaxWidth(), enabled = state.phase != Phase.LESSONS, iconRes = R.drawable.ic_back)
         val canReplace = state.phase in setOf(Phase.LESSONS, Phase.CODING, Phase.DRAWN, Phase.WALK_DONE, Phase.TURN_DONE)
         WordButton("menu_replace", rs(R.string.menu_replace), { onEvent(TurtleEvent.ReplaceFieldClicked) }, modifier = Modifier.fillMaxWidth(), enabled = canReplace, iconRes = R.drawable.ic_floor)
-        WordButton("menu_exit", rs(R.string.menu_exit), { onEvent(TurtleEvent.ExitClicked) }, modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.ic_exit)
+        WordButton("menu_reset", rs(R.string.menu_reset), { onEvent(TurtleEvent.ResetProgressClicked) }, modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.ic_undo)
+        val context = LocalContext.current
+        val version = remember(context) { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?" }
+        Text(
+            text = rs(R.string.menu_about, version) + " · " + rs(R.string.credit_turtle),
+            color = PicoTheme.colorScheme.labelSecondary,
+            style = TurtleType.label,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        WordButton("menu_exit", rs(R.string.menu_exit_app), { onEvent(TurtleEvent.ExitClicked) }, modifier = Modifier.fillMaxWidth(), iconRes = R.drawable.ic_exit)
     }
 }
 

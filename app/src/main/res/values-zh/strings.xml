@@ -166,4 +166,20 @@
     <string name="coach_2">看向积木，捏一下就加进程序</string>
     <string name="coach_3">现在原地跟着海龟转一圈</string>
     <string name="action_got_it">知道了</string>
+
+    <!-- free mode (taste B21) -->
+    <string name="free_card">自由模式 · 第 %1$d 局</string>
+    <string name="free_card_sub">每局一条新路线，程序生成，一直玩</string>
+    <string name="free_done">画对 %1$d 局</string>
+    <string name="free_title">自由 · 第 %1$d 局 · %2$s</string>
+    <string name="action_new_round">再来一局</string>
+
+    <!-- settings (taste D26) -->
+    <string name="menu_reset">重置进度</string>
+    <string name="menu_about">小海龟 v%1$s</string>
+    <string name="menu_exit_app">退出应用</string>
+    <string name="exit_title">退出小乌龟？</string>
+    <string name="exit_body">场地和面板会消失，进度会保留。</string>
+    <string name="action_cancel">取消</string>
+    <string name="snack_reset">进度已重置</string>
 </resources>

@@ -58,7 +58,7 @@ internal fun TurtleStage(state: TurtleUiState, scene: TurtleScene, onEvent: (Tur
                 PoolPanel(PanelSpec.MENU, scene, watched = true) { inView -> MoreMenu(state = state, filled = inView, onEvent = onEvent) }
             }
             AttachmentPanel(PanelSpec.DIALOG) {
-                PoolPanel(PanelSpec.DIALOG, scene) { inView -> BlockedDialog(reason = if (inView) state.blocked else null, onEvent = onEvent) }
+                PoolPanel(PanelSpec.DIALOG, scene) { inView -> AppDialog(reason = if (inView) state.blocked else null, exitConfirm = inView && state.exitConfirm, onEvent = onEvent) }
             }
             AttachmentPanel(PanelSpec.SNACK) {
                 PoolPanel(PanelSpec.SNACK, scene, hugs = true) { inView ->

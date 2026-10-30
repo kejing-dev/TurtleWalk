@@ -238,11 +238,18 @@ def export(path, out, yaw_deg):
     length = max(hi[0] - lo[0], hi[2] - lo[2])
     k = 1.0 / length
     center = np.array([(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2])
-    root = np.eye(4)
-    root[:3, :3] = rot * k
-    root[:3, 3] = -center * k
+    # TRS instead of a 4x4 matrix: every glTF loader applies translation / rotation / scale, not all apply `matrix`
+    # (taste D25, v0.1.3). rotation = yaw about +Y as a quaternion; M p = k R p - k c  ->  t = -k c.
+    half = yaw / 2.0
+    quat = [0.0, math.sin(half), 0.0, math.cos(half)]
     scene = js["scenes"][js.get("scene", 0)]
-    new_root = {"name": "turtle_root", "matrix": list(root.T.ravel()), "children": list(scene["nodes"])}
+    new_root = {
+        "name": "turtle_root",
+        "translation": [float(v) for v in (-center * k)],
+        "rotation": [float(v) for v in quat],
+        "scale": [float(k)] * 3,
+        "children": list(scene["nodes"]),
+    }
     js["nodes"].append(new_root)
     scene["nodes"] = [len(js["nodes"]) - 1]
     write_glb(out, js, binc)

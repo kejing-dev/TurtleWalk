@@ -4,10 +4,15 @@ import com.pico.spatial.core.ecs.Entity
 import com.pico.spatial.core.ecs.ModelEntity
 import com.pico.spatial.core.ecs.resource.Material
 import com.pico.spatial.core.ecs.resource.MeshResource
+import io.embodit.turtlewalk.domain.model.Box3
+import io.embodit.turtlewalk.domain.model.Calibration
+import io.embodit.turtlewalk.domain.model.ModelCalibration
 import io.embodit.turtlewalk.domain.model.P2
 import io.embodit.turtlewalk.domain.model.Quat4
+import io.embodit.turtlewalk.domain.model.TurtleAsset
 import io.embodit.turtlewalk.domain.model.TurtleRules
 import io.embodit.turtlewalk.domain.model.Vec3
+import io.embodit.turtlewalk.platform.TurtleLog
 import io.embodit.turtlewalk.domain.usecase.FloorPose
 import io.embodit.turtlewalk.domain.usecase.Side
 import kotlin.math.PI
@@ -234,14 +239,30 @@ internal class TapeView(parent: Entity, cube: MeshResource, private val material
 /**
  * The turtle (design `entities3d.turtle`, taste B12 since v0.1.2): a real pond turtle model, CC BY 4.0
  * ("Turtle By RISD Naturelab - optimised" by nebulousflynn, see ASSETS.md), exported by tools/turtle_model.py
- * Y-up with the head along -Z and the feet on y = 0, length 1, scaled here to [LENGTH_M]. Walking is the whole
- * body moving with a small waddle (a 7 mm bob, 3 degree roll and a shuffle of the yaw per stride); turning on
- * the spot rocks it slightly. When the model cannot load, a shape-made turtle stands in: shell above the floor,
- * head ahead, flippers at the sides, a yellow V on the floor ahead of the nose.
+ * Y-up with the head along -Z and the feet on y = 0, length 1.
+ *
+ * Taste D25 (v0.1.3): the file is not trusted. The node tree is `group` (field point + heading) > `body` (the
+ * waddle) > `cal` (the calibration node) > the model. After loading, the model's own bounding box is measured
+ * ([Entity.getVisualBounds] relative to itself) and [ModelCalibration] sets `cal` so that the bottom centre is on
+ * the origin, the head points along local -Z and the length is [TurtleAsset.LENGTH_M]; the result is measured again
+ * and logged (`MODEL check`). Walking and turning only ever move `group` and `body`.
+ *
+ * Walking is the whole body moving with a small waddle (a 7 mm bob, 3 degree roll and a shuffle of the yaw per
+ * stride); turning on the spot rocks it slightly. When the model cannot load, a shape-made turtle stands in: shell
+ * above the floor, head ahead, flippers at the sides, a yellow V on the floor ahead of the nose.
  */
 internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshResource, cube: MeshResource, materials: SceneMaterials, model: Entity?) {
     val group = Entity().named("turtle")
     private val body = Entity().named("turtle_body")
+    private val cal = Entity().named("turtle_cal")
+
+    /** The calibration applied to the model (null = the shape-made fallback). */
+    var calibration: Calibration? = null
+        private set
+
+    /** The model's box in `body` space after calibration, as the SDK measures it (null = fallback or not measurable). */
+    var checkedBox: Box3? = null
+        private set
     private var at = P2(Float.NaN, 0f)
     private var heading = Float.NaN
     private var step = -1f
@@ -253,8 +274,29 @@ internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshRe
         parent.addChild(group)
         group.addChild(body)
         if (model != null) {
-            body.addChild(model)
-            model.setLocal(position = Vec3.ZERO, rotation = Quat4.IDENTITY, scale = Vec3(LENGTH_M, LENGTH_M, LENGTH_M))
+            body.addChild(cal)
+            cal.addChild(model)
+            model.setLocal(position = Vec3.ZERO, rotation = Quat4.IDENTITY, scale = Vec3(1f, 1f, 1f))
+            // taste D25: measure the file, then calibrate one node; the file's bbox is the fallback when the SDK has none
+            val measured = runCatching { model.getVisualBounds(model).let { Box3(it.min.domain(), it.max.domain()) } }.onFailure { TurtleLog.w("MODEL bounds failed: $it") }.getOrNull()
+            val box = if (measured == null || measured.isEmpty) TurtleAsset.EXPORTED_BOX else measured
+            val c = ModelCalibration.calibrate(box, TurtleAsset.SPEC)
+            calibration = c
+            cal.setLocal(position = c.offset, rotation = c.rotation, scale = Vec3(c.scale, c.scale, c.scale))
+            TurtleLog.i(
+                "MODEL calibrate file=${TurtleAsset.PATH} measured=${measured != null && !measured.isEmpty} box=${TurtleLog.pos(box.min)}..${TurtleLog.pos(box.max)} " +
+                    "fromRaw=${c.fromRaw} scale=${TurtleLog.f(c.scale, 4)} offset=${TurtleLog.pos(c.offset)} rot=(${TurtleLog.f(c.rotation.x)},${TurtleLog.f(c.rotation.y)},${TurtleLog.f(c.rotation.z)},${TurtleLog.f(c.rotation.w)}) targetLen=${TurtleAsset.LENGTH_M}",
+            )
+            // the gate itself, at run time: where does the calibrated model stand in body space?
+            val after = runCatching { model.getVisualBounds(body).let { Box3(it.min.domain(), it.max.domain()) } }.getOrNull()
+            val expected = c.apply(box)
+            val shown = if (after == null || after.isEmpty) expected else after
+            checkedBox = shown
+            val bc = shown.bottomCenter
+            TurtleLog.i(
+                "MODEL check instance=turtle sdkMeasured=${after != null && !after.isEmpty} bottomCenter=${TurtleLog.pos(bc)} size=${TurtleLog.pos(shown.size)} " +
+                    "lengthErr=${TurtleLog.f(abs(shown.size.z - TurtleAsset.LENGTH_M) / TurtleAsset.LENGTH_M * 100f, 1)}% height=${TurtleLog.f(shown.size.y, 3)} opacityComponent=none",
+            )
         } else {
             fun part(mesh: MeshResource, m: Material, name: String, pos: Vec3, scale: Vec3, rot: Quat4 = Quat4.IDENTITY) {
                 val e = ModelEntity(mesh, m)
@@ -283,7 +325,7 @@ internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshRe
             val e = ModelEntity(cube, materials.nose)
             e.named("turtle_nose$sign")
             group.addChild(e)
-            e.setLocal(position = Vec3(sign * 0.03f, 0.002f, -LENGTH_M * 0.5f - 0.08f), rotation = Quat4.axisAngle(Vec3.UP, sign * 0.6f), scale = Vec3(0.012f, 0.003f, 0.09f))
+            e.setLocal(position = Vec3(sign * 0.03f, 0.002f, -TurtleAsset.LENGTH_M * 0.5f - 0.08f), rotation = Quat4.axisAngle(Vec3.UP, sign * 0.6f), scale = Vec3(0.012f, 0.003f, 0.09f))
         }
     }
 
@@ -321,10 +363,7 @@ internal class TurtleBody(parent: Entity, sphere: MeshResource, cylinder: MeshRe
     }
 
     companion object {
-        const val MODEL_ASSET = "models/turtle.glb"
-
-        /** Shell length on the floor (design: about 240 mm shell, the head adds a little). */
-        const val LENGTH_M = 0.28f
+        const val MODEL_ASSET = TurtleAsset.PATH
         private const val STRIDE_M = 0.09f
         private const val BOB_M = 0.007f
         private const val ROLL_RAD = 0.05f

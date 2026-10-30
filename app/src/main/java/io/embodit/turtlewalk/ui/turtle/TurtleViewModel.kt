@@ -9,6 +9,7 @@ import io.embodit.turtlewalk.data.TurtleRepository
 import io.embodit.turtlewalk.domain.model.Block
 import io.embodit.turtlewalk.domain.model.BlockKind
 import io.embodit.turtlewalk.domain.model.BlockReason
+import io.embodit.turtlewalk.domain.model.LessonRecord
 import io.embodit.turtlewalk.domain.model.Lessons
 import io.embodit.turtlewalk.domain.model.RunSpeed
 import io.embodit.turtlewalk.domain.model.Settings
@@ -21,6 +22,7 @@ import io.embodit.turtlewalk.domain.usecase.CheckUseCase
 import io.embodit.turtlewalk.domain.usecase.Cramped
 import io.embodit.turtlewalk.domain.usecase.Cursor
 import io.embodit.turtlewalk.domain.usecase.FloorPose
+import io.embodit.turtlewalk.domain.usecase.FreeRoutes
 import io.embodit.turtlewalk.domain.usecase.Interpreter
 import io.embodit.turtlewalk.domain.usecase.PlaceCheck
 import io.embodit.turtlewalk.domain.usecase.Program
@@ -239,7 +241,21 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
                 }
             }
             TurtleEvent.LessonListClicked -> toLessons()
-            TurtleEvent.ExitClicked -> _effects.tryEmit(TurtleUiEffect.ExitApp)
+            // taste D26: "exit app" asks first; the blocked dialog's exit and the confirmation end the process
+            TurtleEvent.ExitClicked -> update { it.copy(exitConfirm = true, menuOpen = false) }
+            TurtleEvent.ExitCancelled -> update { it.copy(exitConfirm = false) }
+            TurtleEvent.ExitConfirmed -> {
+                TurtleLog.i("EXIT confirmed")
+                update { it.copy(exitConfirm = false) }
+                _effects.tryEmit(TurtleUiEffect.ExitProcess)
+            }
+            TurtleEvent.ResetProgressClicked -> {
+                saveSettings { it.copy(records = emptyMap(), freeRound = 1, freeSeed = 0L, freeDone = 0, freeLast = "") }
+                update { it.copy(menuOpen = false) }
+                snack(SnackKind.RESET, TurtleRules.SNACK_MS)
+                TurtleLog.i("PROGRESS reset")
+            }
+            TurtleEvent.FreeClicked -> openFree(null, null)
             is TurtleEvent.FloorNudged -> {
                 val max = TurtleRules.FLOOR_NUDGE_MAX_M
                 update { it.copy(floorNudge = (it.floorNudge + event.steps * TurtleRules.FLOOR_NUDGE_M).coerceIn(-max, max)) }
@@ -296,7 +312,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
             is TurtleEvent.SpeedSelected -> update { it.copy(runSpeed = event.speed, run = it.run?.copy(speed = event.speed)) }
             TurtleEvent.FinishRunClicked -> if (s.phase == Phase.RUNNING) update { it.copy(run = it.run?.copy(instant = true, runToSegment = null)) }
             TurtleEvent.StopClicked -> stop()
-            TurtleEvent.NextLessonClicked -> if (s.lessonN >= Lessons.all.size) toLessons() else openLesson(s.lessonN + 1)
+            TurtleEvent.NextLessonClicked -> if (s.isFree) nextFreeRound() else if (s.lessonN >= Lessons.all.size) toLessons() else openLesson(s.lessonN + 1)
 
             TurtleEvent.TurnAlongClicked -> startTurn(TurnMode.ALONG, null)
             TurtleEvent.GuessTurnClicked -> startTurn(TurnMode.GUESS, null)
@@ -376,6 +392,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
                 useEstimatedFloor()
                 update { it.copy(hasFloor = true, estFloor = true) }
             }
+            is TurtleEvent.DebugFree -> openFree(event.round, event.seed)
         }
     }
 
@@ -418,6 +435,61 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
         if (s.phase == Phase.BLOCKED || s.phase == Phase.STARTING) return
         update { it.copy(phase = Phase.LESSONS, run = null, turn = null, walk = null, menuOpen = false, coach = null, selected = null, hintLevel = 0, notOnStart = false, offPath = false, canvasMoving = false) }
     }
+
+    // =========================================================================================
+    // free mode (taste B21): a generated route per round, the course flow unchanged
+    // =========================================================================================
+
+    /**
+     * Opens free mode at [round] (default: the saved round) with [seed] (default: the saved seed, or a new one when
+     * the saved round has none). The route is regenerated from (seed, round), so coming back to the same round shows
+     * the same route and the saved program for it.
+     */
+    private fun openFree(round: Int?, seed: Long?) {
+        val st = _state.value.settings
+        val r = (round ?: st.freeRound).coerceAtLeast(1)
+        val sd = seed ?: (if (r == st.freeRound && st.freeSeed != 0L) st.freeSeed else newSeed())
+        val sameRoute = r == st.freeRound && sd == st.freeSeed
+        val route = FreeRoutes.generate(sd, r, avoid = setOf(st.freeLast).filter { it.isNotEmpty() }.toSet())
+        TurtleLog.i("FREE round=$r seed=$sd tier=${route.tier} family=${route.family} solution='${route.solutionText}' start=${route.lesson.start.at} name=${route.lesson.nameEn}")
+        val program = if (sameRoute) Program.parse(st.record(FreeRoutes.LESSON_N).program) ?: emptyList() else emptyList()
+        update {
+            val next = if (it.field != null) Phase.CODING else Phase.PLACING
+            it.copy(
+                lessonN = FreeRoutes.LESSON_N,
+                freeLesson = route.lesson,
+                program = program,
+                cursor = Cursor(null, program.size),
+                selected = null,
+                hintLevel = 0,
+                undoProgram = null,
+                result = null,
+                resultProgram = null,
+                inkShown = false,
+                inkDimmed = false,
+                run = null,
+                turn = null,
+                walk = null,
+                phase = next,
+                menuOpen = false,
+                coach = if (next == Phase.CODING && 2 !in it.settings.coachSeen) 2 else null,
+                notOnStart = false,
+                offPath = false,
+            )
+        }
+        saveSettings { it.copy(freeRound = r, freeSeed = sd, records = if (sameRoute) it.records else it.records + (FreeRoutes.LESSON_N to LessonRecord())) }
+    }
+
+    /** "Next round": a new seed, the round count up, the finished route remembered so it is not drawn again. */
+    private fun nextFreeRound() {
+        val s = _state.value
+        val finished = s.freeLesson?.let { Program.encode(it.solution) } ?: ""
+        val right = s.result?.verdict == Verdict.MATCH && !s.result.outOfField
+        saveSettings { it.copy(freeLast = finished, freeDone = it.freeDone + (if (right) 1 else 0)) }
+        openFree(s.settings.freeRound + 1, newSeed())
+    }
+
+    private fun newSeed(): Long = (System.nanoTime() xor SystemClock.elapsedRealtimeNanos()).let { if (it == 0L) 1L else it }
 
     private fun back() {
         when (_state.value.phase) {
@@ -728,14 +800,20 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
     private fun debugState(raw: String) {
         val name = raw.trim()
         val lessonPart = name.substringAfter("@L", "")
+        val freePart = name.substringAfter("@F", "")
         val core = name.substringBefore("@")
         val base = core.substringBefore('+').substringBefore(':')
         val overlays = core.substringAfter('+', "").substringBefore(':').split('+').filter { it.isNotEmpty() }
         val mode = core.substringAfter(':', "")
         debugHold = false
         TurtleGraph.head.forceLost = false
-        update { it.copy(lost = false, hasFloor = realHasFloor || estFloor, estFloor = estFloor && !realHasFloor, menuOpen = false, coach = null, notOnStart = false, offPath = false, blocked = null, canvasMoving = false, placeCheck = PlaceCheck.CLEAR, snapped = false, hintLevel = 0, undoProgram = null, selected = null, snack = null) }
+        update { it.copy(lost = false, hasFloor = realHasFloor || estFloor, estFloor = estFloor && !realHasFloor, menuOpen = false, exitConfirm = false, coach = null, notOnStart = false, offPath = false, blocked = null, canvasMoving = false, placeCheck = PlaceCheck.CLEAR, snapped = false, hintLevel = 0, undoProgram = null, selected = null, snack = null) }
         lessonPart.toIntOrNull()?.let { n -> if (n != _state.value.lessonN || base == "coding") openLesson(n) }
+        freePart.toIntOrNull()?.let { n ->
+            // the QA seed makes `...@F<n>` the same route in every screenshot of that round
+            val st = _state.value
+            if (!st.isFree || st.settings.freeRound != n || st.settings.freeSeed != FreeRoutes.qaSeed(n) || base == "coding") openFree(n, FreeRoutes.qaSeed(n))
+        }
         val needsField = base !in setOf("starting", "lessons", "placing", "blocked")
         if (needsField && _state.value.field == null) debugPlace(null)
         when (base) {
@@ -853,6 +931,7 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
                     update { it.copy(lost = true) }
                 }
                 "menu" -> update { it.copy(menuOpen = true) }
+                "exitConfirm" -> update { it.copy(exitConfirm = true) }
                 "coach" -> update { it.copy(coach = when (it.phase) { Phase.DRAWN -> 3; Phase.CODING -> if (mode == "1") 1 else 2; else -> 1 }) }
                 else -> TurtleLog.i("CMD state unknown overlay '$o'")
             }
@@ -866,6 +945,8 @@ class TurtleViewModel(private val repository: TurtleRepository) : ViewModel() {
         o.put("state", s.qaName)
         o.put("phase", s.phase.name)
         o.put("lesson", s.lessonN)
+        if (s.isFree) o.put("free", JSONObject().put("round", s.settings.freeRound).put("seed", s.settings.freeSeed).put("done", s.settings.freeDone).put("solution", s.freeLesson?.let { Program.encode(it.solution) } ?: "").put("name", s.freeLesson?.nameEn ?: ""))
+        o.put("exitConfirm", s.exitConfirm)
         o.put("program", Program.encode(s.program))
         o.put("blocks", s.blockCount)
         o.put("cursor", JSONObject().put("parent", s.cursor.parent ?: -1).put("index", s.cursor.index))

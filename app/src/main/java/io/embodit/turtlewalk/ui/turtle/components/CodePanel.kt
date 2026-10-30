@@ -120,7 +120,7 @@ private fun zh(): Boolean = LocalTurtleResources.current.configuration.locales[0
 private fun ColumnScope.LessonsLayout(state: TurtleUiState, onEvent: (TurtleEvent) -> Unit) {
     TitleRow(rs(R.string.lessons_title), trailing = { TrailingKeys(onEvent) })
     val zh = zh()
-    Column(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         for (row in 0 until 2) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
                 for (col in 0 until 5) {
@@ -129,6 +129,7 @@ private fun ColumnScope.LessonsLayout(state: TurtleUiState, onEvent: (TurtleEven
                 }
             }
         }
+        FreeCard(state, onEvent)
     }
     val line = if (state.field != null) rs(R.string.lessons_field, stepText(state.fieldM), stepText(state.stepM)) else rs(R.string.lessons_no_field)
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -144,18 +145,45 @@ private fun LessonCard(lesson: Lesson, state: TurtleUiState, zh: Boolean, onEven
     val onClick = { onEvent(TurtleEvent.LessonClicked(lesson.n)) }
     Button(
         onClick = onClick,
-        modifier = Modifier.size(148.dp, 176.dp).probe("lesson_${lesson.n}", onClick),
-        size = ButtonDefaults.Regular.copy(height = 176.dp, minWidth = 148.dp),
+        modifier = Modifier.size(148.dp, 158.dp).probe("lesson_${lesson.n}", onClick),
+        size = ButtonDefaults.Regular.copy(height = 158.dp, minWidth = 148.dp),
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(containerColor = PicoTheme.colorScheme.fillTertiary, contentColor = PicoTheme.colorScheme.labelPrimary),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            LessonThumb(lesson, Modifier.size(84.dp))
+            LessonThumb(lesson, Modifier.size(68.dp))
             Text(text = rs(R.string.lesson_n, lesson.n), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1)
             Text(text = lesson.name(zh), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Tick(record.drawnRight)
                 Tick(record.turned || record.walked)
+            }
+        }
+    }
+}
+
+/**
+ * Free mode (taste B21): one wide card under the ten lessons. Round number, what it is, how many rounds were drawn
+ * right; the route itself is only known once the round opens.
+ */
+@Composable
+private fun FreeCard(state: TurtleUiState, onEvent: (TurtleEvent) -> Unit) {
+    val onClick = { onEvent(TurtleEvent.FreeClicked) }
+    val st = state.settings
+    Button(
+        onClick = onClick,
+        modifier = Modifier.width(780.dp).height(56.dp).probe("free", onClick),
+        size = ButtonDefaults.Regular.copy(height = 56.dp, minWidth = 780.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = PicoTheme.colorScheme.fillTertiary, contentColor = PicoTheme.colorScheme.labelPrimary),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Icon(painter = painterResource(R.drawable.ic_repeat), contentDescription = null, modifier = Modifier.size(28.dp), tint = TurtleColors.Interaction)
+            Text(text = rs(R.string.free_card, st.freeRound), color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.titleMedium, maxLines = 1)
+            Text(text = rs(R.string.free_card_sub), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (st.freeDone > 0) {
+                Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(20.dp), tint = PicoTheme.colorScheme.passable)
+                Text(text = rs(R.string.free_done, st.freeDone), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1)
             }
         }
     }
@@ -316,9 +344,10 @@ private fun ColumnScope.CodeLayout(state: TurtleUiState, onEvent: (TurtleEvent) 
     val lesson = state.lesson
     val zh = zh()
     val backable = state.phase in setOf(Phase.CODING, Phase.DRAWN, Phase.TURN_DONE, Phase.WALK_READY, Phase.WALK_DONE)
-    val goal = goalText(lesson.n)
+    val goal = if (lesson.isFree) (if (zh) lesson.goalZh else lesson.goalEn) ?: "" else goalText(lesson.n)
     val leading: (@Composable () -> Unit)? = if (backable) { { BackKey(onEvent) } } else null
-    TitleRow(rs(R.string.lesson_title, lesson.n, lesson.name(zh)), sub = goal, leading = leading, trailing = { TrailingKeys(onEvent) })
+    val title = if (lesson.isFree) rs(R.string.free_title, state.settings.freeRound, lesson.name(zh)) else rs(R.string.lesson_title, lesson.n, lesson.name(zh))
+    TitleRow(title, sub = goal, leading = leading, trailing = { TrailingKeys(onEvent) })
     val editing = state.phase == Phase.CODING || state.phase == Phase.DRAWN
     val showValueBar = editing && state.selected != null
     val wide = state.phase == Phase.CODING
@@ -584,6 +613,13 @@ private fun RightColumn(state: TurtleUiState, zh: Boolean, onEvent: (TurtleEvent
     }
 }
 
+/** "Next lesson" / "Lessons" after the last one / "Next round" in free mode (taste B21). */
+@Composable
+private fun NextButton(lesson: Lesson, onEvent: (TurtleEvent) -> Unit, primary: Boolean) {
+    val text = if (lesson.isFree) rs(R.string.action_new_round) else if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next)
+    WordButton("next", text, { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), primary = primary, iconRes = if (lesson.isFree) R.drawable.ic_repeat else R.drawable.ic_chevron_right, large = primary)
+}
+
 @Composable
 private fun Big(text: String) = Text(text = text, color = PicoTheme.colorScheme.labelPrimary, style = TurtleType.bigNumber, maxLines = 1, softWrap = false)
 
@@ -680,7 +716,7 @@ private fun ColumnScope.DrawnRight(state: TurtleUiState, zh: Boolean, onEvent: (
     Spacer(modifier = Modifier.weight(1f))
     if (right) {
         WordButton("turn_along", rs(R.string.action_turn_along), { onEvent(TurtleEvent.TurnAlongClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_turn, large = true)
-        WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_chevron_right)
+        NextButton(lesson, onEvent, primary = false)
         WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
         Text(text = if (lesson.walkOptional) rs(R.string.lesson9_walk) else rs(R.string.walk_needs), color = PicoTheme.colorScheme.labelSecondary, style = TurtleType.label, maxLines = 1)
     } else {
@@ -725,7 +761,7 @@ private fun ColumnScope.TurnDoneRight(state: TurtleUiState, zh: Boolean, onEvent
     }
     Body(lesson.insight(zh))
     Spacer(modifier = Modifier.weight(1f))
-    WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_chevron_right, large = true)
+    NextButton(lesson, onEvent, primary = true)
     if (t.total > 0) WordButton("turn_again", rs(R.string.action_turn_again), { onEvent(TurtleEvent.TurnAlongClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_turn)
     WordButton("walk", rs(R.string.action_walk), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
 }
@@ -776,7 +812,7 @@ private fun ColumnScope.WalkDoneRight(state: TurtleUiState, zh: Boolean, onEvent
     Chip(text, if (w.verdict == WalkVerdict.GREAT) R.drawable.ic_check else R.drawable.ic_warning, bg, fg, Modifier.fillMaxWidth())
     Body(lesson.insight(zh), maxLines = 3)
     Spacer(modifier = Modifier.weight(1f))
-    WordButton("next", if (lesson.n >= Lessons.all.size) rs(R.string.action_lessons) else rs(R.string.action_next), { onEvent(TurtleEvent.NextLessonClicked) }, Modifier.fillMaxWidth(), primary = true, iconRes = R.drawable.ic_chevron_right, large = true)
+    NextButton(lesson, onEvent, primary = true)
     WordButton("walk_again", rs(R.string.action_walk_again), { onEvent(TurtleEvent.WalkClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_walk)
     WordButton("back_to_blocks", rs(R.string.action_back_to_blocks), { onEvent(TurtleEvent.BackToBlocksClicked) }, Modifier.fillMaxWidth(), iconRes = R.drawable.ic_back)
 }

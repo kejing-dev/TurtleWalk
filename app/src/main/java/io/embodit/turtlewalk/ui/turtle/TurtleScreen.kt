@@ -1,6 +1,10 @@
 package io.embodit.turtlewalk.ui.turtle
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -24,6 +28,10 @@ import io.embodit.turtlewalk.ui.turtle.components.localizedResources
 import io.embodit.turtlewalk.ui.turtle.debug.TurtleProbe
 import io.embodit.turtlewalk.ui.turtle.scene.TurtleFrameSystem
 import io.embodit.turtlewalk.ui.turtle.scene.TurtleScene
+import kotlin.system.exitProcess
+
+/** After closing the Stage and removing the task, the process ends this much later (lets the close go through). */
+private const val EXIT_DELAY_MS = 600L
 
 /**
  * The one screen of the app, living in a Mixed Stage. It wires the three parts together: the
@@ -99,6 +107,18 @@ fun TurtleScreen() {
                     runCatching { navigator.closeStage() }.onFailure { TurtleLog.e("STAGE close failed: $it", it) }
                 }
                 TurtleUiEffect.RetryTracking -> scene.restartTracking()
+                TurtleUiEffect.ExitProcess -> {
+                    // taste D26: close the Stage, finish and remove every task of the app, then end the process so that
+                    // audio, tracking and the scene's entities are released for good
+                    TurtleLog.i("STAGE exit: closing stage, removing tasks, ending the process")
+                    runCatching { navigator.closeStage() }.onFailure { TurtleLog.e("STAGE close failed: $it", it) }
+                    val am = context.applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                    runCatching { am?.appTasks?.forEach { it.finishAndRemoveTask() } }.onFailure { TurtleLog.e("STAGE finishAndRemoveTask failed: $it", it) }
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        TurtleLog.i("STAGE exitProcess")
+                        exitProcess(0)
+                    }, EXIT_DELAY_MS)
+                }
             }
         }
     }

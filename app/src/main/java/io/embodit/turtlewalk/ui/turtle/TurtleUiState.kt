@@ -14,6 +14,7 @@ import io.embodit.turtlewalk.domain.model.Verdict
 import io.embodit.turtlewalk.domain.usecase.CheckResult
 import io.embodit.turtlewalk.domain.usecase.Cursor
 import io.embodit.turtlewalk.domain.usecase.FloorPose
+import io.embodit.turtlewalk.domain.usecase.FreeRoutes
 import io.embodit.turtlewalk.domain.usecase.PlaceCheck
 import io.embodit.turtlewalk.domain.usecase.Program
 
@@ -21,7 +22,7 @@ import io.embodit.turtlewalk.domain.usecase.Program
 enum class Phase { STARTING, LESSONS, PLACING, CODING, RUNNING, DRAWN, TURN_ALONG, TURN_DONE, WALK_READY, WALKING, TURN_HOME, WALK_DONE, BLOCKED }
 
 /** Snackbar kinds (design `panels.snackbar`, the overlays that speak through it). */
-enum class SnackKind { SCANNING, EST_FLOOR, LOST, NOT_ON_START, OFF_PATH, SNAPPED, STEP_SIZE, CLEARED, TOO_LONG, LIMIT_BLOCKS, LIMIT_NESTING }
+enum class SnackKind { SCANNING, EST_FLOOR, LOST, NOT_ON_START, OFF_PATH, SNAPPED, STEP_SIZE, CLEARED, TOO_LONG, LIMIT_BLOCKS, LIMIT_NESTING, RESET }
 
 /** A short-lived snackbar message; [untilMs] = elapsedRealtime when it goes. */
 data class Snack(val kind: SnackKind, val untilMs: Long, val number: Int = 0, val value: Float = 0f)
@@ -78,7 +79,10 @@ data class RunUi(val serial: Int, val speed: RunSpeed, val blockId: Int? = null,
 
 data class TurtleUiState(
     val phase: Phase = Phase.STARTING,
+    /** 1..10 = a lesson; [FreeRoutes.LESSON_N] (0) = free mode, whose route is [freeLesson]. */
     val lessonN: Int = 1,
+    /** Free mode (taste B21): the generated route under way (`settings.freeRound`, `settings.freeSeed`). */
+    val freeLesson: Lesson? = null,
     val program: List<Block> = emptyList(),
     val cursor: Cursor = Cursor(null, 0),
     val selected: Int? = null,
@@ -121,6 +125,8 @@ data class TurtleUiState(
     val notOnStart: Boolean = false,
     val offPath: Boolean = false,
     val menuOpen: Boolean = false,
+    /** Settings -> "exit app": the confirmation dialog is up (taste D26). */
+    val exitConfirm: Boolean = false,
     /** First-run coachmark showing: 1 canvas, 2 blocks, 3 turn along; null = none. */
     val coach: Int? = null,
     val blocked: BlockReason? = null,
@@ -128,7 +134,10 @@ data class TurtleUiState(
     val snack: Snack? = null,
 ) {
     val lesson: Lesson
-        get() = Lessons.byNumber(lessonN)
+        get() = if (lessonN == FreeRoutes.LESSON_N) freeLesson ?: Lessons.byNumber(1) else Lessons.byNumber(lessonN)
+
+    val isFree: Boolean
+        get() = lessonN == FreeRoutes.LESSON_N
 
     /** One step in metres. */
     val stepM: Float
@@ -195,6 +204,7 @@ data class TurtleUiState(
             if (offPath && phase == Phase.WALKING) sb.append("+offPath")
             if (lost) sb.append("+lost")
             if (menuOpen) sb.append("+menu")
+            if (exitConfirm) sb.append("+exitConfirm")
             if (coach != null) sb.append("+coach")
             when (phase) {
                 Phase.DRAWN -> result?.let { sb.append(":" + it.verdict.tag) }
@@ -203,7 +213,7 @@ data class TurtleUiState(
                 Phase.WALK_DONE -> walk?.let { if (it.target) sb.append(":target") else it.verdict?.let { v -> sb.append(":" + v.tag) } }
                 else -> Unit
             }
-            if (phase != Phase.STARTING && phase != Phase.LESSONS && phase != Phase.BLOCKED) sb.append("@L$lessonN")
+            if (phase != Phase.STARTING && phase != Phase.LESSONS && phase != Phase.BLOCKED) sb.append(if (isFree) "@F${settings.freeRound}" else "@L$lessonN")
             return sb.toString()
         }
 }
@@ -273,7 +283,18 @@ sealed class TurtleEvent {
 
     data object LessonListClicked : TurtleEvent()
 
+    /** Settings -> exit app: asks first (taste D26). */
     data object ExitClicked : TurtleEvent()
+
+    data object ExitConfirmed : TurtleEvent()
+
+    data object ExitCancelled : TurtleEvent()
+
+    /** Settings -> reset progress: lesson records and the free-mode round. */
+    data object ResetProgressClicked : TurtleEvent()
+
+    /** Free mode (taste B21): the card on the lesson list. */
+    data object FreeClicked : TurtleEvent()
 
     data class FloorNudged(val steps: Int) : TurtleEvent()
 
@@ -353,6 +374,9 @@ sealed class TurtleEvent {
     data object DebugCoachReset : TurtleEvent()
 
     data object DebugNoFloor : TurtleEvent()
+
+    /** `free [round] [seed]`: opens free mode at a round (default: the saved one) with a seed (default: random). */
+    data class DebugFree(val round: Int?, val seed: Long?) : TurtleEvent()
 }
 
 sealed class TurtleUiEffect {
@@ -360,4 +384,7 @@ sealed class TurtleUiEffect {
 
     /** Restart the trackers after the "unavailable" dialog's retry. */
     data object RetryTracking : TurtleUiEffect()
+
+    /** Taste D26: confirmed exit: close the Stage, finish and remove the task, end the process. */
+    data object ExitProcess : TurtleUiEffect()
 }

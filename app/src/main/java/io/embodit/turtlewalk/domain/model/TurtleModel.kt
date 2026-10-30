@@ -111,7 +111,14 @@ data class Lesson(
     val walkOptional: Boolean = false,
     /** Lessons 1 and 2: a star at the end of the line (recommended direction A + B's opening). */
     val star: Boolean = false,
+    /** Free mode (taste B21): the goal line of a generated route; the ten lessons use string resources. */
+    val goalZh: String? = null,
+    val goalEn: String? = null,
 ) {
+    /** Free mode: a route made by rules, not one of the ten lessons. */
+    val isFree: Boolean
+        get() = n == 0
+
     fun name(zh: Boolean) = if (zh) nameZh else nameEn
 
     fun insight(zh: Boolean) = if (zh) insightZh else insightEn
@@ -155,6 +162,11 @@ data class LessonRecord(
 
 data class Settings(
     val language: LanguagePref = LanguagePref.SYSTEM,
+    /** Free mode (taste B21): the round under way and its seed (0 = not started), rounds drawn right, the last route (not repeated). */
+    val freeRound: Int = 1,
+    val freeSeed: Long = 0L,
+    val freeDone: Int = 0,
+    val freeLast: String = "",
     /** Last field size, metres (2, 1.5 or 1). */
     val fieldM: Float = 2f,
     val lastLesson: Int = 1,
@@ -176,6 +188,10 @@ object TurtleRules {
     const val FIELD_STEPS = 2f
     const val FIELD_MIN_M = 1f
     const val FIELD_MAX_M = 2f
+
+    /** Free mode: a route must stay this far inside the field (steps) and have at most this many segments. */
+    const val FREE_LIMIT_STEPS = 0.95f
+    const val FREE_MAX_SEGMENTS = 16
 
     const val MAX_TOP_BLOCKS = 16
     const val MAX_NESTING = 2

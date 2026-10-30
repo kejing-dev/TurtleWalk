@@ -9,11 +9,13 @@
 | License | CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ (checked on the Sketchfab API: `license.slug = "by"`) |
 | Source | https://sketchfab.com/3d-models/07f52e154aca40cfa1ce4e9260d2ae73 |
 | File used | Objaverse-1.0 mirror: https://huggingface.co/datasets/allenai/objaverse/resolve/main/glbs/000-085/07f52e154aca40cfa1ce4e9260d2ae73.glb (3,404,628 B, 25,000 triangles, core glTF 2.0, no extensions) |
-| Changes | One root node added: turned −90° about Y so that the head points along −Z, moved so the feet stand on y = 0 and the body is centred, scaled to a length of 1 (the app scales it to 0.28 m). Geometry, UVs and textures are unchanged. |
+| Changes | One root node added (TRS, not a matrix, since v0.1.3): turned −90° about Y so that the head points along −Z, moved so the feet stand on y = 0 and the body is centred, scaled to a length of 1. Geometry, UVs and textures are unchanged. At run time the app measures the loaded model's bounding box and calibrates it again (taste D25, `ModelCalibration`): bottom centre on the origin, head along −Z, length `TurtleAsset.LENGTH_M` = 0.35 m. |
 
 The credit also shows at the bottom of the lesson list in the app.
 
-The model files are not in git (`.gitignore`: `*.glb`, `raw/`). To rebuild `app/src/main/assets/models/turtle.glb`:
+The model files are not in git (`.gitignore`: `*.glb`, `raw/`); on a new machine the APK has no turtle until this is done
+(the app logs `MODEL turtle loaded=false` and shows the shape-made fallback). To rebuild `app/src/main/assets/models/turtle.glb`
+(`pip install numpy pillow` first):
 
 ```
 mkdir -p ../turtle-walk-assets/raw

@@ -367,6 +367,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         val model = runCatching { Entity.loadSuspend("asset://" + TurtleBody.MODEL_ASSET) }.onFailure { TurtleLog.e("MODEL turtle load failed: $it") }.getOrNull()
         TurtleLog.i("MODEL turtle loaded=${model != null} ms=${SystemClock.elapsedRealtime() - t0Model}")
         turtle = TurtleBody(fg.entity, sphere, patch, cube, m, model).also { it.setShown(false) }
+        if (model != null && turtle?.calibration == null) TurtleLog.w("MODEL loaded but not calibrated")
         handle =
             ModelEntity(cube, m.handle).also { h ->
                 h.named(HANDLE_NAME)
@@ -547,6 +548,8 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
             targetExec = Interpreter.run(lesson.solution, lesson.start)
             layTarget(targetExec!!, lesson, step)
             inkLaidMoves = -1
+            // a new lesson / round: the cached run of the previous one must not be drawn as its ink (debug state jumps)
+            if (state.phase != Phase.RUNNING) shownExec = null
         }
         // the target: hidden once drawn right, while turning along a right drawing and on the walk
         val match = state.result?.verdict == Verdict.MATCH
@@ -866,7 +869,7 @@ class TurtleScene(private val sink: (TurtleEvent) -> Unit) : TurtleProbe.ScenePr
         if (state.coach == null) rig[PanelSpec.COACH]?.hide()
         if (state.snackNow(SystemClock.elapsedRealtime()) == null) rig[PanelSpec.SNACK]?.hide()
         val dialog = rig[PanelSpec.DIALOG]
-        if (state.blocked != null) {
+        if (state.blocked != null || state.exitConfirm) {
             if (!dialogPlaced) {
                 val flat = Vec3(head.forward.x, 0f, head.forward.z).let { if (it.length < 0.1f) Vec3.AHEAD else it.normalized() }
                 dialog?.show(head.position + flat * PanelSpec.DIALOG_DISTANCE_M, PanelSpec.DIALOG_SCALE)

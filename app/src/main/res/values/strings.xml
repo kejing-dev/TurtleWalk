@@ -167,4 +167,20 @@
     <string name="coach_2">Look at a block and pinch to add it to the program</string>
     <string name="coach_3">Now turn on the spot along with the turtle</string>
     <string name="action_got_it">Got it</string>
+
+    <!-- free mode (taste B21) -->
+    <string name="free_card">Free play · round %1$d</string>
+    <string name="free_card_sub">A new route every round, made by the app · endless</string>
+    <string name="free_done">%1$d drawn right</string>
+    <string name="free_title">Free · round %1$d · %2$s</string>
+    <string name="action_new_round">Next round</string>
+
+    <!-- settings (taste D26) -->
+    <string name="menu_reset">Reset progress</string>
+    <string name="menu_about">Turtle Walk v%1$s</string>
+    <string name="menu_exit_app">Exit app</string>
+    <string name="exit_title">Exit Turtle Walk?</string>
+    <string name="exit_body">The field and the panel go away; your progress is kept.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="snack_reset">Progress reset</string>
 </resources>
